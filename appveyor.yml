@@ -15,11 +15,10 @@ cache:
   - C:\RLibrary
 
 environment:
-  APPVEYOR: true # used in tests to detect appveyor
   NOT_CRAN: true
   _R_CHECK_FORCE_SUGGESTS_: false
-  #  USE_RTOOLS: true
-  #  GCC_PATH: mingw_32
+  USE_RTOOLS: true
+  GCC_PATH: mingw_32
   # R_REMOTES_STANDALONE: true
 
 

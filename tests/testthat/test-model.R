@@ -1,5 +1,5 @@
 # Setup -------------------------------------------------------------------
-APPVEYOR <- identical(Sys.getenv("APPVEYOR"), "true")
+APPVEYOR <- isTRUE(Sys.getenv("APPVEYOR") %in% c("true", "True"))
 TRAVIS <- identical(Sys.getenv("TRAVIS"), "true")
 NOT_CRAN <-
   identical(Sys.getenv("NOT_CRAN"), "true") ||
