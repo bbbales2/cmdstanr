@@ -26,11 +26,9 @@ skip_commits:
   files:
     - docs/*
 
-before_build:
-  - cmd: bash inst/make_cmdstan.sh -j2
-
 build_script:
   - travis-tool.sh install_deps
+  - cmd: bash inst/make_cmdstan.sh -j2
 
 test_script:
   - travis-tool.sh run_tests
