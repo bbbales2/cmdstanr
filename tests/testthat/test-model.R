@@ -1,10 +1,18 @@
 # Setup -------------------------------------------------------------------
+APPVEYOR <- identical(Sys.getenv("APPVEYOR"), "true")
+TRAVIS <- identical(Sys.getenv("TRAVIS"), "true")
 NOT_CRAN <-
   identical(Sys.getenv("NOT_CRAN"), "true") ||
-  identical(Sys.getenv("TRAVIS"), "true")
+  TRAVIS ||
+  APPVEYOR
+
 
 if (NOT_CRAN) {
-  set_cmdstan_path()
+  if (!APPVEYOR) {
+    set_cmdstan_path()
+  } else {
+    set_cmdstan_path("/.cmdstanr/cmdstan")
+  }
   stan_program <- file.path(cmdstan_path(), "examples", "bernoulli", "bernoulli.stan")
   mod <- cmdstan_model(stan_file = stan_program)
 
