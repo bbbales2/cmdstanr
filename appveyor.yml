@@ -27,7 +27,7 @@ skip_commits:
     - docs/*
 
 before_build:
-  - sudo bash inst/make_cmdstan.sh -j2
+  - ps: bash inst/make_cmdstan.sh -j2
 
 build_script:
   - travis-tool.sh install_deps
