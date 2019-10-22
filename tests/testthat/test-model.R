@@ -11,7 +11,7 @@ if (NOT_CRAN) {
   if (!APPVEYOR) {
     set_cmdstan_path()
   } else {
-    set_cmdstan_path("/.cmdstanr/cmdstan")
+    set_cmdstan_path("C:/MinGW/msys/1.0/.cmdstanr/cmdstan-2.21.0/")
   }
   stan_program <- file.path(cmdstan_path(), "examples", "bernoulli", "bernoulli.stan")
   mod <- cmdstan_model(stan_file = stan_program)
