@@ -18,7 +18,7 @@ environment:
   NOT_CRAN: true
   _R_CHECK_FORCE_SUGGESTS_: false
   USE_RTOOLS: true
-  GCC_PATH: mingw_32
+  # GCC_PATH: mingw_32
   # R_REMOTES_STANDALONE: true
 
 
@@ -27,7 +27,7 @@ skip_commits:
     - docs/*
 
 before_build:
-  - ps: bash inst/make_cmdstan.sh -j2
+  - cmd: bash inst/make_cmdstan.sh -j2
 
 build_script:
   - travis-tool.sh install_deps
