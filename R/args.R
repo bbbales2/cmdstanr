@@ -136,7 +136,9 @@ SampleArgs <- R6::R6Class(
                           metric = NULL,
                           stepsize = NULL,
                           adapt_engaged = NULL,
-                          adapt_delta = NULL) {
+                          adapt_delta = NULL,
+                          experimental = NULL,
+                          which_adaptation = NULL) {
 
       # TODO: cmdstanpy uses different names for these but these are same as
       # regular cmdstan for now
@@ -151,6 +153,9 @@ SampleArgs <- R6::R6Class(
       self$stepsize <- stepsize # TODO: cmdstanpy uses step_size but cmdstan is stepsize
       self$adapt_engaged <- adapt_engaged
       self$adapt_delta <- adapt_delta
+
+      self$experimental <- experimental
+      self$which_adaptation <- which_adaptation
 
       if (metric_is_file(self$metric)) {
         self$metric <- sapply(self$metric, repair_path)
@@ -192,8 +197,13 @@ SampleArgs <- R6::R6Class(
         .make_arg("stepsize", idx),
         "engine=nuts",
         .make_arg("max_depth"),
-        if (!is.null(self$adapt_delta) || !is.null(self$adapt_engaged))
+        if (!is.null(self$adapt_delta) ||
+            !is.null(self$adapt_engaged) ||
+            !is.null(self$experimental) ||
+            !is.null(self$which_adaptation))
           "adapt",
+        .make_arg("experimental"),
+        .make_arg("which_adaptation"),
         .make_arg("adapt_delta"),
         .make_arg("adapt_engaged")
       )
@@ -397,6 +407,14 @@ validate_sample_args <- function(self, num_runs) {
                             lower = 0, upper = 1,
                             len = 1,
                             null.ok = TRUE)
+  checkmate::assert_integerish(self$experimental,
+                               lower = 0, upper = 1,
+                               len = 1,
+                               null.ok = TRUE)
+  checkmate::assert_integerish(self$which_adaptation,
+                               lower = 0,
+                               len = 1,
+                               null.ok = TRUE)
   checkmate::assert_integerish(self$max_depth,
                                lower = 1,
                                len = 1,

@@ -300,7 +300,9 @@ sample_method <- function(data = NULL,
                           adapt_delta = NULL,
                           metric = NULL,
                           stepsize = NULL,
-                          max_depth = NULL) {
+                          max_depth = NULL,
+                          experimental = NULL,
+                          which_adaptation = NULL) {
 
   num_chains <- num_chains %||% 1
   checkmate::assert_integerish(num_chains, lower = 1)
@@ -315,7 +317,9 @@ sample_method <- function(data = NULL,
     metric = metric,
     stepsize = stepsize,
     adapt_engaged = adapt_engaged,
-    adapt_delta = adapt_delta
+    adapt_delta = adapt_delta,
+    experimental = experimental,
+    which_adaptation = which_adaptation
   )
   cmdstan_args <- CmdStanArgs$new(
     method_args = sample_args,
