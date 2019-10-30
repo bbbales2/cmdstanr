@@ -3,19 +3,13 @@ NOT_CRAN <-
   identical(Sys.getenv("NOT_CRAN"), "true") ||
   identical(Sys.getenv("TRAVIS"), "true")
 
-TEMPFILE <- tempfile(fileext = ".csv")
-
 if (NOT_CRAN) {
   set_cmdstan_path()
   stan_program <- file.path(cmdstan_path(), "examples", "bernoulli", "bernoulli.stan")
-  mod <- cmdstan_model(stan_file = stan_program)
-
-  # stan prog outside cmdstan dir
-  stan_program_2 <- test_path("resources", "stan", "bernoulli.stan")
-  mod_2 <- cmdstan_model(stan_file = stan_program_2)
+  mod <- cmdstan_model(stan_file = stan_program, compile = FALSE)
 
   # valid ways to supply data
-  data_list <- list(N = 10, y =c(0,1,0,0,0,0,0,0,0,1))
+  data_list <- list(N = 10, y = c(0,1,0,0,0,0,0,0,0,1))
   data_file_r <- test_path("resources", "data", "bernoulli.data.R")
   data_file_json <- test_path("resources", "data", "bernoulli.data.json")
 }
@@ -55,6 +49,13 @@ test_that("object initialized correctly", {
   expect_equal(mod$exe_file(), character(0))
 })
 
+test_that("code() and print() methods work", {
+  skip_on_cran()
+  expect_known_output(mod$print(), file = test_path("answers", "model-print-output.stan"))
+  expect_known_value(mod$code(), file = test_path("answers", "model-code-output.rds"))
+})
+
+
 test_that("error if no compile() before sample()", {
   skip_on_cran()
   expect_error(
@@ -68,16 +69,25 @@ test_that("compile() method works", {
   skip_on_cran()
   expected <- if (!file.exists(strip_ext(mod$stan_file())))
     "Translating Stan model" else "is up to date"
-  out <- utils::capture.output(mod$compile())
+  out <- utils::capture.output(mod$compile(quiet = FALSE))
   expect_output(print(out), expected)
   expect_equal(mod$exe_file(), strip_ext(stan_program))
 })
 
 test_that("compilation works when stan program not in cmdstan dir", {
   skip_on_cran()
-  out <- utils::capture.output(mod_2$compile())
-  expect_output(print(out), "Translating Stan model")
+
+  stan_program_2 <- test_path("resources", "stan", "bernoulli.stan")
+  expect_message(
+    mod_2 <- cmdstan_model(stan_file = stan_program_2, quiet = TRUE),
+    "Compiling Stan program..."
+  )
   expect_equal(mod_2$exe_file(), strip_ext(absolute_path(stan_program_2)))
+
+  out <- utils::capture.output(
+    mod_2 <- suppressMessages(cmdstan_model(stan_file = stan_program_2, quiet = FALSE))
+  )
+  expect_output(print(out), "is up to date")
 
   # cleanup
   file.remove(paste0(mod_2$exe_file(), c("", ".o",".hpp")))
@@ -107,7 +117,7 @@ if (NOT_CRAN) {
     stepsize = 1.1,
     adapt_engaged = TRUE,
     adapt_delta = 0.7,
-    diagnostic_file = TEMPFILE
+    save_diagnostics = FALSE
   )
 
   # using any one of these should cause sample() to error
@@ -126,7 +136,7 @@ if (NOT_CRAN) {
     stepsize = 0,
     adapt_engaged = "NO",
     adapt_delta = 2,
-    diagnostic_file = "NOT_A_DIR/FILE_NAME"
+    save_diagnostics = "NOT_LOGICAL"
   )
 
   bad_arg_values_2 <- list(
@@ -212,7 +222,7 @@ if (NOT_CRAN) {
     algorithm = "lbfgs",
     iter = 100,
     init_alpha = 0.002,
-    diagnostic_file = TEMPFILE
+    save_diagnostics = FALSE
   )
 
   # using any of these should cause optimize() to error
@@ -224,7 +234,7 @@ if (NOT_CRAN) {
     algorithm = "NOT_AN_ALGORITHM",
     iter = -20,
     init_alpha = -20,
-    diagnostic_file = "NOT_A_DIR/FILE_NAME"
+    save_diagnostics = "NOT_LOGICAL"
   )
 }
 
@@ -286,7 +296,7 @@ if (NOT_CRAN) {
     tol_rel_obj = 0.011,
     eval_elbo = 101,
     output_samples = 10,
-    diagnostic_file = TEMPFILE
+    save_diagnostics = FALSE
   )
 
   # using any one of these should cause sample() to error
@@ -305,7 +315,7 @@ if (NOT_CRAN) {
     tol_rel_obj = -0.5,
     eval_elbo = -10,
     output_samples = -10,
-    diagnostic_file = "NOT_A_DIR/FILE_NAME"
+    save_diagnostics = "NOT_LOGICAL"
   )
 }
 
@@ -334,14 +344,4 @@ test_that("variational() method errors for any invalid argument before calling c
   }
 })
 
-
-
-# Other methods -----------------------------------------------------------
-
-context("CmdStanModel-other")
-test_that("code() and print() methods work", {
-  skip_on_cran()
-  expect_known_output(mod$print(), file = test_path("answers", "model-print-output"))
-  expect_known_output(cat(mod$code()), file = test_path("answers", "model-code-output"))
-})
 

@@ -5,7 +5,13 @@
 #' file containing a Stan program.
 #'
 #' @export
-#' @param stan_file Path to Stan program.
+#' @param stan_file The path to a `.stan` file containing a Stan program.
+#' @param compile Do compilation? The default is `TRUE`. If `FALSE`
+#'   compilation can be done later via the [`$compile()`][model-method-compile]
+#'   method.
+#' @param ... Optionally, additional arguments to pass to the
+#'   [`$compile()`][model-method-compile] method. Ignored if `compile=FALSE`.
+#'
 #' @return A [`CmdStanModel`] object.
 #'
 #' @seealso [install_cmdstan()], [cmdstan_path()]
@@ -14,20 +20,18 @@
 #' @examples
 #' \dontrun{
 #' # Set path to cmdstan
-#' # Note: if you installed CmdStan via install_cmdstan() with default settings
-#' # then default below should work. Otherwise use the `path` argument to
-#' # specify the location of your CmdStan installation.
+#' # (Note: if you installed CmdStan via install_cmdstan() with default settings
+#' # then setting the path is unnecessary but the default below should still work.
+#' # Otherwise use the `path` argument to specify the location of your
+#' # CmdStan installation.)
 #'
 #' set_cmdstan_path(path = NULL)
 #'
-#' # Create a CmdStan model object from a Stan program,
+#' # Create a CmdStanModel object from a Stan program,
 #' # here using the example model that comes with CmdStan
 #' stan_program <- file.path(cmdstan_path(), "examples/bernoulli/bernoulli.stan")
 #' mod <- cmdstan_model(stan_program)
 #' mod$print()
-#'
-#' # Compile to create executable
-#' mod$compile()
 #'
 #' # Run sample method (MCMC via Stan's dynamic HMC/NUTS),
 #' # specifying data as a named list (like RStan)
@@ -60,8 +64,8 @@
 #'
 #' }
 #'
-cmdstan_model <- function(stan_file) {
-  CmdStanModel$new(stan_file = stan_file)
+cmdstan_model <- function(stan_file, compile = TRUE, ...) {
+  CmdStanModel$new(stan_file = stan_file, compile = compile, ...)
 }
 
 
@@ -106,9 +110,14 @@ CmdStanModel <- R6::R6Class(
     exe_file_ = character()
   ),
   public = list(
-    initialize = function(stan_file) {
+    initialize = function(stan_file, compile, ...) {
       checkmate::assert_file_exists(stan_file, access = "r", extension = "stan")
+      checkmate::assert_flag(compile)
       private$stan_file_ <- absolute_path(stan_file)
+      if (compile) {
+        message("Compiling Stan program...")
+        self$compile(...)
+      }
       invisible(self)
     },
     stan_file = function() private$stan_file_,
@@ -132,26 +141,33 @@ CmdStanModel <- R6::R6Class(
 #' @name model-method-compile
 #' @family CmdStanModel methods
 #'
-#' @description The `compile` method of a [`CmdStanModel`] object calls CmdStan
+#' @description The `$compile()` method of a [`CmdStanModel`] object calls CmdStan
 #'   to translate a Stan program to C++ and then create a compiled executable.
 #'   The resulting files are placed in the same directory as the Stan program
-#'   associated with the `CmdStanModel` object.
+#'   associated with the `CmdStanModel` object. After compilation the path
+#'   to the executable can be accesed via the `$exe_file()` method.
 #'
 #' @section Usage:
 #'   ```
 #'   $compile(
+#'     quiet = TRUE,
 #'     threads = FALSE,
 #'     opencl = FALSE,
 #'     opencl_platform_id = 0,
 #'     opencl_device_id = 0,
 #'     compiler_flags = NULL
 #'   )
+#'   $exe_file()
 #'   ```
 #'
 #' @section Arguments:
 #'   Leaving all arguments at their defaults should be fine for most users, but
 #'   optional arguments are provided to enable new features in CmdStan (and the
 #'   Stan Math library). See the CmdStan manual for more details.
+#'   * `quiet`: (logical) Should the verbose output from CmdStan during
+#'     compilation be suppressed? The default is `TRUE`, but if you encounter an
+#'     error we recommend trying again with `quiet=FALSE` to see more of the
+#'     output.
 #'   * `threads`: (logical) Should the model be compiled with
 #'     [threading support](https://github.com/stan-dev/math/wiki/Threading-Support)?
 #'     If `TRUE` then `-DSTAN_THREADS` is added to the compiler flags. See
@@ -167,15 +183,20 @@ CmdStanModel <- R6::R6Class(
 #'
 #' @section Value: This method is called for its side effect of creating the
 #'   executable and adding its path to the [`CmdStanModel`] object, but it also
-#'   returns the [`CmdStanModel`] object invisibly. After compilation the path
-#'   to the executable can be accesed via `$exe_file()`.
+#'   returns the [`CmdStanModel`] object invisibly.
 #'
 #' @template seealso-docs
-#' @inherit cmdstan_model examples
+#'
+#' @examples
+#' stan_program <- file.path(cmdstan_path(), "examples/bernoulli/bernoulli.stan")
+#' mod <- cmdstan_model(stan_program, compile = FALSE)
+#' mod$compile()
+#' mod$exe_file()
 #'
 NULL
 
-compile_method <- function(threads = FALSE,
+compile_method <- function(quiet = TRUE,
+                           threads = FALSE,
                            opencl = FALSE,
                            opencl_platform_id = 0,
                            opencl_device_id = 0,
@@ -187,24 +208,26 @@ compile_method <- function(threads = FALSE,
                                        opencl_device_id,
                                        compiler_flags)
   # rebuild main.o and the model if there was a change in make/local
-  if(make_local_changed) {
-    print("A change in the compile flags was found. Recompiling the model...\n")
-    build_cleanup(exe,
-                  remove_main = TRUE)
+  if (make_local_changed) {
+    message("A change in the compiler flags was found. Forcing recompilation.\n")
+    build_cleanup(exe, remove_main = TRUE)
   }
   # add path to the build tbb library to the PATH variable to avoid copying the dll file
-  if ((.cmdstanr$VERSION >= "2.21") && os_is_windows()) {
+  if (cmdstan_version() >= "2.21" && os_is_windows()) {
     path_to_TBB <- file.path(cmdstan_path(), "stan", "lib", "stan_math", "lib", "tbb")
-    Sys.setenv(PATH = paste0(path_to_TBB, ";", Sys.getenv("PATH"),sep=""))
+    Sys.setenv(PATH = paste0(path_to_TBB, ";", Sys.getenv("PATH")))
   }
+
   exe <- cmdstan_ext(exe) # adds .exe on Windows
   run_log <- processx::run(
     command = make_cmd(),
     args = exe,
     wd = cmdstan_path(),
-    echo_cmd = TRUE,
-    echo = TRUE
+    echo_cmd = !quiet,
+    echo = !quiet,
+    spinner = quiet
   )
+
   private$exe_file_ <- exe
   invisible(self)
 }
@@ -216,10 +239,10 @@ CmdStanModel$set("public", name = "compile", value = compile_method)
 #' @name model-method-sample
 #' @family CmdStanModel methods
 #'
-#' @description The `sample` method of a [`CmdStanModel`] object runs the default
-#'   MCMC algorithm in CmdStan (`algorithm=hmc engine=nuts`), to produce a set
-#'   of draws from the posterior distribution of a model conditioned on some
-#'   data.
+#' @description The `$sample()` method of a [`CmdStanModel`] object runs the
+#'   default MCMC algorithm in CmdStan (`algorithm=hmc engine=nuts`), to produce
+#'   a set of draws from the posterior distribution of a model conditioned on
+#'   some data.
 #'
 #' @section Usage:
 #'   ```
@@ -228,7 +251,7 @@ CmdStanModel$set("public", name = "compile", value = compile_method)
 #'     seed = NULL,
 #'     refresh = NULL,
 #'     init = NULL,
-#'     diagnostic_file = NULL,
+#'     save_diagnostics = FALSE,
 #'     num_chains = NULL,
 #'     # num_cores = NULL, # not yet implemented
 #'     num_warmup = NULL,
@@ -245,40 +268,51 @@ CmdStanModel$set("public", name = "compile", value = compile_method)
 #'
 #' @template model-common-args
 #' @section Arguments unique to the `sample` method: In addition to the
-#'   arguments above, the `sample` method also has its own set of arguments.
-#'   These arguments are described briefly here and in greater detail in the
-#'   CmdStan manual. Arguments left at `NULL` default to the default used by the
-#'   installed version of CmdStan.
+#'   arguments above, the `$sample()` method also has its own set of arguments.
+#'
+#'   The following arguments are offered by CmdStanR but not CmdStan:
+#'
 #'   * `num_chains`: (positive integer) The number of Markov chains to run.
-#'   * `num_samples`: (positive integer) The number of sampling iterations.
-#'   * `num_warmup`: (positive integer) The number of warmup iterations.
-#'   * `save_warmup`: (logical) Should warmup iterations also be saved? The default is `FALSE`.
+#'   Currently the chains are run sequentially, but the option to
+#'   execute CmdStan runs in parallel is coming soon.
+#'   This argument does not correspond to an argument in CmdStan because all
+#'   CmdStan arguments pertain to the execution of a single run only.
+#'
+#'   The rest of the arguments correspond to arguments offered by CmdStan. They
+#'   are described briefly here and in greater detail in the CmdStan manual.
+#'   Arguments left at `NULL` default to the default used by the installed
+#'   version of CmdStan.
+#'
+#'   * `num_samples`: (positive integer) The number of post-warmup iterations to
+#'   run per chain.
+#'   * `num_warmup`: (positive integer) The number of warmup iterations to run
+#'   per chain.
+#'   * `save_warmup`: (logical) Should warmup iterations be saved? The default
+#'   is `FALSE`.
 #'   * `thin`: (positive integer) The period between saved samples. This should
-#'     typically be left at its default (no thinning).
+#'   typically be left at its default (no thinning).
 #'   * `adapt_engaged`: (logical) Do warmup adaptation?
 #'   * `adapt_delta`: (real in `(0,1)`) The adaptation target acceptance
-#'     statistic.
+#'   statistic.
 #'   * `stepsize`: (positive real) The _initial_ step size for the discrete
-#'     approximation to continuous Hamiltonian dynamics. This is further tuned
-#'     during warmup.
-#'   * `metric`: (character) The geometry of the base manifold. One of the
-#'     following:
-#'      - A single string from among `"diag_e"`, `"dense_e"`, `"unit_e"`;
-#'      - A character vector containing paths to files (one per chain)
-#'        compatible with CmdStan that contain precomputed metrics.
-#'        Each path must be to a JSON or Rdump file that contains an entry
-#'        `inv_metric` whose value is either the diagonal vector or the full
-#'        covariance matrix.
+#'   approximation to continuous Hamiltonian dynamics. This is further tuned
+#'   during warmup.
+#'   * `metric`: (character) The geometry of the base manifold. See the
+#'   _Euclidean Metric_ section of the CmdStan documentation for more details.
+#'   One of the following:
+#'     - A single string from among `"diag_e"`, `"dense_e"`, `"unit_e"`.
+#'     - A character vector containing paths to files (one per chain) compatible
+#'     with CmdStan that contain precomputed metrics. Each path must be to a
+#'     JSON or Rdump file that contains an entry `inv_metric` whose value is
+#'     either the diagonal vector or the full covariance matrix. If
+#'     `adapt_engaged=TRUE`, Stan will use the provided metric just as an
+#'     initial guess during adaptation. To turn off adaptation when using a
+#'     precomputed metric set `adapt_engaged=FALSE`.
+#'   * `max_depth`: (positive integer) The maximum allowed tree depth for the
+#'   NUTS engine. See the _Tree Depth_ section of the CmdStan manual for more
+#'   details.
 #'
-#'     If you want to turn off adaptation when using a precomputed metric set
-#'     `adapt_engaged=FALSE`, otherwise it will use the provided metric just
-#'     as an initial guess during adaptation. See the _Euclidean Metric_ section
-#'     of the CmdStan manual for more details on these options.
-#'
-#'   * `max_depth`: (positive integer) The maximum allowed tree depth. See the
-#'     _Tree Depth_ section of the CmdStan manual for more details.
-#'
-#' @section Value: The `sample` method returns a [`CmdStanMCMC`] object.
+#' @section Value: The `$sample()` method returns a [`CmdStanMCMC`] object.
 #'
 #' @template seealso-docs
 #' @inherit cmdstan_model examples
@@ -289,7 +323,7 @@ sample_method <- function(data = NULL,
                           seed = NULL,
                           refresh = NULL,
                           init = NULL,
-                          diagnostic_file = NULL,
+                          save_diagnostics = FALSE,
                           num_chains = NULL, # TODO: CmdStan does 1 chain, but should this default to 4?
                           # num_cores = NULL, # TODO
                           num_warmup = NULL,
@@ -327,18 +361,17 @@ sample_method <- function(data = NULL,
     exe_file = self$exe_file(),
     run_ids = chain_ids,
     data_file = process_data(data),
-    diagnostic_file = diagnostic_file,
+    save_diagnostics = save_diagnostics,
     seed = seed,
     init = init,
     refresh = refresh
   )
 
   runset <- RunSet$new(args = cmdstan_args, num_runs = num_chains)
-  csv_files <- runset$output_files()
   for (chain in chain_ids) { # FIXME: allow parallelization
     run_log <- processx::run(
-      command = cmdstan_args$compose_command(),
-      args = cmdstan_args$compose_all_args(chain, csv_files[chain]),
+      command = runset$command(),
+      args = runset$command_args()[[chain]],
       wd = dirname(self$exe_file()),
       echo_cmd = FALSE,
       echo = TRUE
@@ -354,14 +387,14 @@ CmdStanModel$set("public", name = "sample", value = sample_method)
 #' @name model-method-optimize
 #' @family CmdStanModel methods
 #'
-#' @description The `optimize` method of a [`CmdStanModel`] object runs Stan's
-#'   optimizer.
+#' @description The `$optimize()` method of a [`CmdStanModel`] object runs
+#'   Stan's optimizer.
 #'
 #' @details CmdStan can find the posterior mode (assuming there is one). If the
 #'   posterior is not convex, there is no guarantee Stan will be able to find
 #'   the global mode as opposed to a local optimum of log probability. For
 #'   optimization, the mode is calculated without the Jacobian adjustment for
-#'   con- strained variables, which shifts the mode due to the change of
+#'   constrained variables, which shifts the mode due to the change of
 #'   variables. Thus modes correspond to modes of the model as written.
 #'
 #'   -- [*CmdStan Interface User's Guide*](https://github.com/stan-dev/cmdstan/releases/latest)
@@ -373,7 +406,7 @@ CmdStanModel$set("public", name = "sample", value = sample_method)
 #'     seed = NULL,
 #'     refresh = NULL,
 #'     init = NULL,
-#'     diagnostic_file = NULL,
+#'     save_diagnostics = FALSE,
 #'     algorithm = NULL,
 #'     init_alpha = NULL,
 #'     iter = NULL
@@ -382,17 +415,18 @@ CmdStanModel$set("public", name = "sample", value = sample_method)
 #'
 #' @template model-common-args
 #' @section Arguments unique to the `optimize` method: In addition to the
-#'   arguments above, the `optimize` method also has its own set of arguments.
-#'   These arguments are described briefly here and in greater detail in the
-#'   CmdStan manual. Arguments left at `NULL` default to the default used by the
-#'   installed version of CmdStan.
-#'   * `algorithm`: (string) The optimization algorithm. One of
-#'     `"lbfgs"`, `"bfgs"`, or `"newton"`.
+#'   arguments above, the `$optimize()` method also has its own set of
+#'   arguments. These arguments are described briefly here and in greater detail
+#'   in the CmdStan manual. Arguments left at `NULL` default to the default used
+#'   by the installed version of CmdStan.
+#'
+#'   * `algorithm`: (string) The optimization algorithm. One of `"lbfgs"`,
+#'   `"bfgs"`, or `"newton"`.
 #'   * `iter`: (positive integer) The number of iterations.
 #'   * `init_alpha`: (non-negative real) The line search step size for first
-#'      iteration. Not applicable if `algorithm="newton"`.
+#'   iteration. Not applicable if `algorithm="newton"`.
 #'
-#' @section Value: The `optimize` method returns a [`CmdStanMLE`] object.
+#' @section Value: The `$optimize()` method returns a [`CmdStanMLE`] object.
 #'
 #' @template seealso-docs
 #' @inherit cmdstan_model examples
@@ -403,7 +437,7 @@ optimize_method <- function(data = NULL,
                             seed = NULL,
                             refresh = NULL,
                             init = NULL,
-                            diagnostic_file = NULL,
+                            save_diagnostics = FALSE,
                             algorithm = NULL,
                             init_alpha = NULL,
                             iter = NULL) {
@@ -425,7 +459,7 @@ optimize_method <- function(data = NULL,
     exe_file = self$exe_file(),
     run_ids = 1,
     data_file = process_data(data),
-    diagnostic_file = diagnostic_file,
+    save_diagnostics = save_diagnostics,
     seed = seed,
     init = init,
     refresh = refresh
@@ -433,8 +467,8 @@ optimize_method <- function(data = NULL,
 
   runset <- RunSet$new(args = cmdstan_args, num_runs = 1)
   run_log <- processx::run(
-    command = cmdstan_args$compose_command(),
-    args = cmdstan_args$compose_all_args(idx = 1, runset$output_files()[1]),
+    command = runset$command(),
+    args = runset$command_args()[[1]],
     wd = dirname(self$exe_file()),
     echo_cmd = FALSE,
     echo = TRUE
@@ -449,7 +483,7 @@ CmdStanModel$set("public", name = "optimize", value = optimize_method)
 #' @name model-method-variational
 #' @family CmdStanModel methods
 #'
-#' @description The `variational` method of a [`CmdStanModel`] object runs
+#' @description The `$variational()` method of a [`CmdStanModel`] object runs
 #'   Stan's variational Bayes (ADVI) algorithms.
 #'
 #' @details CmdStan can fit a variational approximation to the posterior. The
@@ -468,7 +502,7 @@ CmdStanModel$set("public", name = "optimize", value = optimize_method)
 #'     seed = NULL,
 #'     refresh = NULL,
 #'     init = NULL,
-#'     diagnostic_file = NULL,
+#'     save_diagnostics = FALSE,
 #'     algorithm = NULL,
 #'     iter = NULL,
 #'     grad_samples = NULL,
@@ -484,28 +518,29 @@ CmdStanModel$set("public", name = "optimize", value = optimize_method)
 #'
 #' @template model-common-args
 #' @section Arguments unique to the `variational` method: In addition to the
-#'   arguments above, the `variational` method also has its own set of
+#'   arguments above, the `$variational()` method also has its own set of
 #'   arguments. These arguments are described briefly here and in greater detail
 #'   in the CmdStan manual. Arguments left at `NULL` default to the default used
 #'   by the installed version of CmdStan.
+#'
 #'   * `algorithm`: (string) The algorithm. Either `"meanfield"` or `"fullrank"`.
 #'   * `iter`: (positive integer) The _maximum_ number of iterations.
 #'   * `grad_samples`: (positive integer) The number of samples for Monte Carlo
-#'     estimate of gradients.
+#'   estimate of gradients.
 #'   * `elbo_samples`: (positive integer) The number of samples for Monte Carlo
-#'     estimate of ELBO (objective function).
+#'   estimate of ELBO (objective function).
 #'   * `eta`: (positive real) The stepsize weighting parameter for adaptive
-#'     stepsize sequence.
+#'   stepsize sequence.
 #'   * `adapt_engaged`: (logical) Do warmup adaptation?
 #'   * `adapt_iter`: (positive integer) The _maximum_ number of adaptation
-#'     iterations.
+#'   iterations.
 #'   * `tol_rel_obj`: (positive real) Convergence tolerance on the relative norm
-#'     of the objective.
+#'   of the objective.
 #'   * `eval_elbo`: (positive integer) Evaluate ELBO every Nth iteration.
-#'   * `output_samples:` (positive integer) Number of posterior samples to
-#'     draw and save.
+#'   * `output_samples:` (positive integer) Number of posterior samples to draw
+#'   and save.
 #'
-#' @section Value: The `variational` method returns a [`CmdStanVB`] object.
+#' @section Value: The `$variational()` method returns a [`CmdStanVB`] object.
 #'
 #' @template seealso-docs
 #' @inherit cmdstan_model examples
@@ -516,7 +551,7 @@ variational_method <- function(data = NULL,
                                seed = NULL,
                                refresh = NULL,
                                init = NULL,
-                               diagnostic_file = NULL,
+                               save_diagnostics = FALSE,
                                algorithm = NULL,
                                iter = NULL,
                                grad_samples = NULL,
@@ -552,7 +587,7 @@ variational_method <- function(data = NULL,
     exe_file = self$exe_file(),
     run_ids = 1,
     data_file = process_data(data),
-    diagnostic_file = diagnostic_file,
+    save_diagnostics = save_diagnostics,
     seed = seed,
     init = init,
     refresh = refresh
@@ -560,8 +595,8 @@ variational_method <- function(data = NULL,
 
   runset <- RunSet$new(args = cmdstan_args, num_runs = 1)
   run_log <- processx::run(
-    command = cmdstan_args$compose_command(),
-    args = cmdstan_args$compose_all_args(idx = 1, runset$output_files()[1]),
+    command = runset$command(),
+    args = runset$command_args()[[1]],
     wd = dirname(self$exe_file()),
     echo_cmd = FALSE,
     echo = TRUE

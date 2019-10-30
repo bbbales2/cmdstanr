@@ -31,20 +31,18 @@ exe_file \tab Return the file path to the compiled executable once compiled. \cr
 \examples{
 \dontrun{
 # Set path to cmdstan
-# Note: if you installed CmdStan via install_cmdstan() with default settings
-# then default below should work. Otherwise use the `path` argument to
-# specify the location of your CmdStan installation.
+# (Note: if you installed CmdStan via install_cmdstan() with default settings
+# then setting the path is unnecessary but the default below should still work.
+# Otherwise use the `path` argument to specify the location of your
+# CmdStan installation.)
 
 set_cmdstan_path(path = NULL)
 
-# Create a CmdStan model object from a Stan program,
+# Create a CmdStanModel object from a Stan program,
 # here using the example model that comes with CmdStan
 stan_program <- file.path(cmdstan_path(), "examples/bernoulli/bernoulli.stan")
 mod <- cmdstan_model(stan_program)
 mod$print()
-
-# Compile to create executable
-mod$compile()
 
 # Run sample method (MCMC via Stan's dynamic HMC/NUTS),
 # specifying data as a named list (like RStan)

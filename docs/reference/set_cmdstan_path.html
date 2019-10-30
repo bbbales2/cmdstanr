@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Save output and data files — fit-method-save_output_files • cmdstanr</title>
+<title>Get or set the file path to the CmdStan installation — set_cmdstan_path • cmdstanr</title>
 
 <!-- favicons -->
 <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
@@ -42,19 +42,12 @@
 
 
 
-<meta property="og:title" content="Save output and data files — fit-method-save_output_files" />
-<meta property="og:description" content="All fitted model objects have methods for saving (copying to a
-specified location) the temporary files created by CmdStanR for CmdStan
-output and data files. These methods move output files or data files from
-the CmdStanR temporary directory to a user-specified location. By default
-the suffix '-&amp;lt;run_id&amp;gt;_&amp;lt;timestamp&amp;gt;' is added to the file name(s), where
-run_id is the chain number if applicable (MCMC only) and 1 otherwise.
-If files with the specified names already exist they are overwritten, but
-this shouldn't occur unless the timestamp argument has been intentionally
-set to FALSE.
-If necessary, the versions without the save_ prefix (e.g.,
-$output_files()) can be used to get the path(s) to the temporary file(s)
-themselves." />
+<meta property="og:title" content="Get or set the file path to the CmdStan installation — set_cmdstan_path" />
+<meta property="og:description" content="Use the set_cmdstan_path() function to tell CmdStanR where the
+CmdStan installation in located. Once the path has been set,
+cmdstan_path() will return the full path to the CmdStan installation and
+cmdstan_version() will return the CmdStan version number. See Details
+for how to avoid manually setting the path in each R session." />
 <meta property="og:image" content="https://mc-stan.org/cmdstanr/logo.png" />
 <meta name="twitter:card" content="summary" />
 
@@ -166,69 +159,66 @@ themselves." />
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Save output and data files</h1>
+    <h1>Get or set the file path to the CmdStan installation</h1>
     
-    <div class="hidden name"><code>fit-method-save_output_files.Rd</code></div>
+    <div class="hidden name"><code>set_cmdstan_path.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>All fitted model objects have methods for saving (copying to a
-specified location) the temporary files created by CmdStanR for CmdStan
-output and data files. These methods move output files or data files from
-the CmdStanR temporary directory to a user-specified location. By default
-the suffix <code>'-&lt;run_id&gt;_&lt;timestamp&gt;'</code> is added to the file name(s), where
-<code>run_id</code> is the chain number if applicable (MCMC only) and <code>1</code> otherwise.
-If files with the specified names already exist they are overwritten, but
-this shouldn't occur unless the <code>timestamp</code> argument has been intentionally
-set to <code>FALSE</code>.</p>
-<p>If necessary, the versions without the <code>save_</code> prefix (e.g.,
-<code>$output_files()</code>) can be used to get the path(s) to the temporary file(s)
-themselves.</p>
+    <p>Use the <code>set_cmdstan_path()</code> function to tell CmdStanR where the
+CmdStan installation in located. Once the path has been set,
+<code>cmdstan_path()</code> will return the full path to the CmdStan installation and
+<code>cmdstan_version()</code> will return the CmdStan version number. See <strong>Details</strong>
+for how to avoid manually setting the path in each <span style="R">R</span> session.</p>
     </div>
 
+    <pre class="usage"><span class='fu'>set_cmdstan_path</span>(<span class='kw'>path</span> <span class='kw'>=</span> <span class='kw'>NULL</span>)
 
+<span class='fu'>cmdstan_path</span>()
 
-    <h2 class="hasAnchor" id="usage"><a class="anchor" href="#usage"></a>Usage</h2>
-
-    
-<pre>$save_output_files(dir = ".", basename = NULL, timestamp = TRUE)
-$save_data_file(dir = ".", basename = NULL, timestamp = TRUE)
-$save_diagnostic_files(dir = ".", basename = NULL, timestamp = TRUE)
-
-$output_files()
-$data_file()
-$diagnostic_files()
-</pre>
+<span class='fu'>cmdstan_version</span>()</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
-
-    
-
-<ul>
-<li><p><code>dir</code>: (string) Path to directory where the files should be saved.</p></li>
-<li><p><code>basename</code>: (string) Base filename to use.</p></li>
-<li><p><code>timestamp</code>: (logical) Should a timestamp be added to the file name(s)?
-Defaults to <code>TRUE</code>. The timestamp is preceeded by an underscore is of
-the form</p></li>
-</ul>
+    <table class="ref-arguments">
+    <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>path</th>
+      <td><p>The full file path to the CmdStan installation as a string. If
+<code>NULL</code> (the default) then the path is set to the default path used by
+<code><a href='install_cmdstan.html'>install_cmdstan()</a></code> if it exists.</p></td>
+    </tr>
+    </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>For the <code>$save_*</code> methods, the paths to the new files or <code>NA</code>
-for any that couldn't be copied. For the methods without the <code>save_</code>
-prefix, the path to the temporary files.</p>
-    <h2 class="hasAnchor" id="see-also"><a class="anchor" href="#see-also"></a>See also</h2>
+    <p>A string. Either the file path to the CmdStan installation or the
+CmdStan version number.</p>
+    <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
-    <div class='dont-index'><p><code><a href='CmdStanMCMC.html'>CmdStanMCMC</a></code>, <code><a href='CmdStanMLE.html'>CmdStanMLE</a></code>, <code><a href='CmdStanVB.html'>CmdStanVB</a></code></p></div>
+    <p>Before the package can be used it needs to know where the CmdStan
+installation is located. When the package is loaded it tries to help automate
+this to avoid having to manually set the path every session:</p><ul>
+<li><p>If the <a href='https://rdrr.io/r/base/Sys.setenv.html'>environment variable</a> <code>"CMDSTAN"</code> exists at load time
+then its value will be automatically set as the default path to CmdStan for
+the <span style="R">R</span> session.</p></li>
+<li><p>If no environment variable is found when loaded but the directory
+<code>".cmdstanr/cmdstan"</code> exists in the user's home directory
+(<code><a href='https://rdrr.io/r/base/Sys.getenv.html'>Sys.getenv("HOME")</a></code>, <em>not</em> the current working directory) then it will
+be set as the path to CmdStan for the <span style="R">R</span> session. This is the same as the
+default directory that <code><a href='install_cmdstan.html'>install_cmdstan()</a></code> would use to install the latest
+version of CmdStan.</p></li>
+</ul>
+
+<p>It is always possible to change the path after loading the package using
+<code>set_cmdstan_path(path)</code>.</p>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
-      <li><a href="#usage">Usage</a></li>
       <li><a href="#arguments">Arguments</a></li>
       <li><a href="#value">Value</a></li>
-      <li><a href="#see-also">See also</a></li>
+      <li><a href="#details">Details</a></li>
     </ul>
 
   </div>

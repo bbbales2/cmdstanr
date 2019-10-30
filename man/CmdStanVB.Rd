@@ -5,7 +5,7 @@
 \title{CmdStanVB objects}
 \description{
 A \code{CmdStanVB} object is the fitted model object returned by the
-\code{\link[=model-method-variational]{variational()}} method of a
+\code{\link[=model-method-variational]{$variational()}} method of a
 \code{\link{CmdStanModel}} object.
 }
 \details{
@@ -17,9 +17,11 @@ A \code{CmdStanVB} object is the fitted model object returned by the
 \code{draws} \tab Return approximate posterior draws as matrix with one colunm per
 variable. \cr
 \code{\link[=fit-method-save_output_files]{save_output_files}}
-\tab Save output csv files to a specified location. \cr
+\tab Save output CSV files to a specified location. \cr
 \code{\link[=fit-method-save_data_file]{save_data_file}}
-\tab Save R dump or JSON data file to a specified location. \cr
+\tab Save JSON data file to a specified location. \cr
+\code{\link[=fit-method-save_diagnostic_files]{save_diagnostic_files}}
+\tab Save diagnostic CSV files to a specified location. \cr
 }
 }
 \seealso{

@@ -4,19 +4,22 @@
 \alias{model-method-compile}
 \title{Compile a Stan program or get the Stan code}
 \description{
-The \code{compile} method of a \code{\link{CmdStanModel}} object calls CmdStan
+The \code{$compile()} method of a \code{\link{CmdStanModel}} object calls CmdStan
 to translate a Stan program to C++ and then create a compiled executable.
 The resulting files are placed in the same directory as the Stan program
-associated with the \code{CmdStanModel} object.
+associated with the \code{CmdStanModel} object. After compilation the path
+to the executable can be accesed via the \code{$exe_file()} method.
 }
 \section{Usage}{
 \preformatted{$compile(
+  quiet = TRUE,
   threads = FALSE,
   opencl = FALSE,
   opencl_platform_id = 0,
   opencl_device_id = 0,
   compiler_flags = NULL
 )
+$exe_file()
 }
 }
 
@@ -26,6 +29,10 @@ Leaving all arguments at their defaults should be fine for most users, but
 optional arguments are provided to enable new features in CmdStan (and the
 Stan Math library). See the CmdStan manual for more details.
 \itemize{
+\item \code{quiet}: (logical) Should the verbose output from CmdStan during
+compilation be suppressed? The default is \code{TRUE}, but if you encounter an
+error we recommend trying again with \code{quiet=FALSE} to see more of the
+output.
 \item \code{threads}: (logical) Should the model be compiled with
 \href{https://github.com/stan-dev/math/wiki/Threading-Support}{threading support}?
 If \code{TRUE} then \code{-DSTAN_THREADS} is added to the compiler flags. See
@@ -44,58 +51,14 @@ used when compiling the model.
 \section{Value}{
  This method is called for its side effect of creating the
 executable and adding its path to the \code{\link{CmdStanModel}} object, but it also
-returns the \code{\link{CmdStanModel}} object invisibly. After compilation the path
-to the executable can be accesed via \code{$exe_file()}.
+returns the \code{\link{CmdStanModel}} object invisibly.
 }
 
 \examples{
-\dontrun{
-# Set path to cmdstan
-# Note: if you installed CmdStan via install_cmdstan() with default settings
-# then default below should work. Otherwise use the `path` argument to
-# specify the location of your CmdStan installation.
-
-set_cmdstan_path(path = NULL)
-
-# Create a CmdStan model object from a Stan program,
-# here using the example model that comes with CmdStan
 stan_program <- file.path(cmdstan_path(), "examples/bernoulli/bernoulli.stan")
-mod <- cmdstan_model(stan_program)
-mod$print()
-
-# Compile to create executable
+mod <- cmdstan_model(stan_program, compile = FALSE)
 mod$compile()
-
-# Run sample method (MCMC via Stan's dynamic HMC/NUTS),
-# specifying data as a named list (like RStan)
-standata <- list(N = 10, y =c(0,1,0,0,0,0,0,0,0,1))
-fit_mcmc <- mod$sample(data = standata, seed = 123, num_chains = 2)
-
-# Call CmdStan's bin/summary
-fit_mcmc$summary()
-
-# Run optimization method (default is Stan's LBFGS algorithm)
-# and also demonstrate specifying data as a path to a file (readable by CmdStan)
-my_data_file <- file.path(cmdstan_path(), "examples/bernoulli/bernoulli.data.R")
-fit_optim <- mod$optimize(data = my_data_file, seed = 123)
-
-#' Print estimates
-fit_optim$summary()
-
-# Run variational Bayes method (default is meanfield ADVI)
-fit_vb <- mod$variational(data = standata, seed = 123)
-
-# Call CmdStan's bin/summary
-fit_vb$summary()
-
-# For models fit using MCMC, if you like working with RStan's stanfit objects
-# then you can create one with rstan::read_stan_csv()
-if (require(rstan, quietly = TRUE)) {
-  stanfit <- rstan::read_stan_csv(fit_mcmc$output_files())
-  print(stanfit)
-}
-
-}
+mod$exe_file()
 
 }
 \seealso{

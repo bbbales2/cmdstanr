@@ -4,15 +4,15 @@
 \alias{model-method-optimize}
 \title{Run Stan's optimization algorithms}
 \description{
-The \code{optimize} method of a \code{\link{CmdStanModel}} object runs Stan's
-optimizer.
+The \code{$optimize()} method of a \code{\link{CmdStanModel}} object runs
+Stan's optimizer.
 }
 \details{
 CmdStan can find the posterior mode (assuming there is one). If the
 posterior is not convex, there is no guarantee Stan will be able to find
 the global mode as opposed to a local optimum of log probability. For
 optimization, the mode is calculated without the Jacobian adjustment for
-con- strained variables, which shifts the mode due to the change of
+constrained variables, which shifts the mode due to the change of
 variables. Thus modes correspond to modes of the model as written.
 
 -- \href{https://github.com/stan-dev/cmdstan/releases/latest}{CmdStan Interface User's Guide}
@@ -23,7 +23,7 @@ variables. Thus modes correspond to modes of the model as written.
   seed = NULL,
   refresh = NULL,
   init = NULL,
-  diagnostic_file = NULL,
+  save_diagnostics = FALSE,
   algorithm = NULL,
   init_alpha = NULL,
   iter = NULL
@@ -37,12 +37,12 @@ be specified for any of the fitting methods (\code{sample}, \code{optimize},
 \code{variational}). Arguments left at \code{NULL} default to the default used by the
 installed version of CmdStan.
 \itemize{
-\item \code{data} (multiple options): The data to use:
+\item \code{data}: (multiple options) The data to use. One of the following:
 \itemize{
-\item A named list of \R objects like for RStan;
-\item A path to a data file compatible with CmdStan (\R dump or JSON). See
-the appendices in the CmdStan manual for details on using these
-formats.
+\item A named list of \R objects (like for RStan). Internally this list is
+then written to JSON for CmdStan using \code{\link[=write_stan_json]{write_stan_json()}}.
+\item A path to a data file compatible with CmdStan (JSON or \R dump). See
+the appendices in the CmdStan manual for details on using these formats.
 }
 \item \code{seed}: (positive integer) A seed for the (P)RNG to pass to CmdStan.
 \item \code{refresh}: (non-negative integer) The number of iterations between
@@ -55,21 +55,28 @@ screen updates.
 \item A character vector of data file paths (one per chain) to
 initialization files.
 }
-\item \code{diagnostic_file}: (character) A file path where auxiliary diagnostic
-information (beyond standard diagnostics) should be written to CSV.
-By default no file is written, which is appropriate for most use cases.
+\item \code{save_diagnostics}: (logical) Should auxiliary diagnostic information
+(beyond standard diagnostics) be written to temporary diagnostic CSV files?
+This argument replaces CmdStan's \code{diagnostic_file} argument and the content
+written to CSV is controlled by the user's CmdStan installation and not
+CmdStanR (and for some algorithms no content may be written). The default
+is \code{save_diagnostics=FALSE}, which is appropriate for almost every use case
+(all diagnostics recommended for users to check are \emph{always} saved, e.g.,
+divergences for HMC). To save the temporary files created when
+\code{save_diagnostics=TRUE} see the
+\code{\link[=fit-method-save_diagnostic_files]{$save_diagnostic_files()}} method.
 }
 }
 
 \section{Arguments unique to the \code{optimize} method}{
  In addition to the
-arguments above, the \code{optimize} method also has its own set of arguments.
-These arguments are described briefly here and in greater detail in the
-CmdStan manual. Arguments left at \code{NULL} default to the default used by the
-installed version of CmdStan.
+arguments above, the \code{$optimize()} method also has its own set of
+arguments. These arguments are described briefly here and in greater detail
+in the CmdStan manual. Arguments left at \code{NULL} default to the default used
+by the installed version of CmdStan.
 \itemize{
-\item \code{algorithm}: (string) The optimization algorithm. One of
-\code{"lbfgs"}, \code{"bfgs"}, or \code{"newton"}.
+\item \code{algorithm}: (string) The optimization algorithm. One of \code{"lbfgs"},
+\code{"bfgs"}, or \code{"newton"}.
 \item \code{iter}: (positive integer) The number of iterations.
 \item \code{init_alpha}: (non-negative real) The line search step size for first
 iteration. Not applicable if \code{algorithm="newton"}.
@@ -77,26 +84,24 @@ iteration. Not applicable if \code{algorithm="newton"}.
 }
 
 \section{Value}{
- The \code{optimize} method returns a \code{\link{CmdStanMLE}} object.
+ The \code{$optimize()} method returns a \code{\link{CmdStanMLE}} object.
 }
 
 \examples{
 \dontrun{
 # Set path to cmdstan
-# Note: if you installed CmdStan via install_cmdstan() with default settings
-# then default below should work. Otherwise use the `path` argument to
-# specify the location of your CmdStan installation.
+# (Note: if you installed CmdStan via install_cmdstan() with default settings
+# then setting the path is unnecessary but the default below should still work.
+# Otherwise use the `path` argument to specify the location of your
+# CmdStan installation.)
 
 set_cmdstan_path(path = NULL)
 
-# Create a CmdStan model object from a Stan program,
+# Create a CmdStanModel object from a Stan program,
 # here using the example model that comes with CmdStan
 stan_program <- file.path(cmdstan_path(), "examples/bernoulli/bernoulli.stan")
 mod <- cmdstan_model(stan_program)
 mod$print()
-
-# Compile to create executable
-mod$compile()
 
 # Run sample method (MCMC via Stan's dynamic HMC/NUTS),
 # specifying data as a named list (like RStan)
