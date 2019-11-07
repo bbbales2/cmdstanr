@@ -93,6 +93,35 @@ test_that("compilation works when stan program not in cmdstan dir", {
   file.remove(paste0(mod_2$exe_file(), c("", ".o",".hpp")))
 })
 
+test_that("compilation works with include_paths", {
+  skip_on_cran()
+
+  stan_program_w_include <- test_path("resources", "stan", "bernoulli_include.stan")
+  expect_error(
+    cmdstan_model(stan_file = stan_program_w_include, include_paths = "NOT_A_DIR",
+                  quiet = TRUE),
+    "Directory 'NOT_A_DIR' does not exist"
+  )
+
+  expect_error(
+    expect_output(
+      cmdstan_model(stan_file = stan_program_w_include, quiet = TRUE),
+      "could not find include file"
+    )
+  )
+
+  expect_message(
+    mod_w_include <- cmdstan_model(stan_file = stan_program_w_include, quiet = TRUE,
+                                   include_paths = test_path("resources", "stan")),
+    "Compiling Stan program"
+  )
+  expect_equal(mod_w_include$exe_file(), strip_ext(absolute_path(stan_program_w_include)))
+
+  # cleanup
+  file.remove(paste0(mod_w_include$exe_file(), c("", ".o",".hpp")))
+})
+
+
 # Sample ------------------------------------------------------------------
 context("CmdStanModel-sample")
 
@@ -117,7 +146,10 @@ if (NOT_CRAN) {
     stepsize = 1.1,
     adapt_engaged = TRUE,
     adapt_delta = 0.7,
-    save_diagnostics = FALSE
+    save_diagnostics = FALSE,
+    init_buffer = 20,
+    term_buffer = 0,
+    window = 15
   )
 
   # using any one of these should cause sample() to error
@@ -136,17 +168,24 @@ if (NOT_CRAN) {
     stepsize = 0,
     adapt_engaged = "NO",
     adapt_delta = 2,
-    save_diagnostics = "NOT_LOGICAL"
+    save_diagnostics = "NOT_LOGICAL",
+    init_buffer = "NOT_INTEGER",
+    term_buffer = "NOT_INTEGER",
+    window = "NOT_INTEGER"
   )
 
   bad_arg_values_2 <- list(
     init = "NOT_A_FILE",
     seed = 1:10,
     stepsize = 1:10,
-    metric = c("AA", "BB")
+    metric = c("AA", "BB"),
+    init_buffer = -5,
+    term_buffer = -6,
+    window = -7
   )
 
   bad_arg_values_3 <- list(
+    data_file = rep("NOT_A_FILE", 5),
     init = rep("NOT_A_FILE", 10),
     metric = c("AA", "BB", "CC")
   )
@@ -203,6 +242,12 @@ test_that("sample() method errors for any invalid arguments before calling cmdst
   for (nm in names(bad_arg_values_2)) {
     args <- ok_arg_values
     args[[nm]] <- bad_arg_values_2[[nm]]
+    expect_error(do.call(mod$sample, args), regexp = nm)
+  }
+
+  for (nm in names(bad_arg_values_3)) {
+    args <- ok_arg_values
+    args[[nm]] <- bad_arg_values_3[[nm]]
     expect_error(do.call(mod$sample, args), regexp = nm)
   }
 })

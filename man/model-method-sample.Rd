@@ -24,9 +24,14 @@ some data.
   thin = NULL,
   max_depth = NULL,
   metric = NULL,
+  metric_file = NULL,
+  inv_metric = NULL,
   stepsize = NULL,
   adapt_engaged = TRUE,
-  adapt_delta = NULL
+  adapt_delta = NULL,
+  init_buffer = NULL,
+  term_buffer = NULL,
+  window = NULL
 )
 }
 }
@@ -94,28 +99,44 @@ per chain.
 is \code{FALSE}.
 \item \code{thin}: (positive integer) The period between saved samples. This should
 typically be left at its default (no thinning).
-\item \code{adapt_engaged}: (logical) Do warmup adaptation?
+\item \code{adapt_engaged}: (logical) Do warmup adaptation? The default is \code{TRUE}.
+If a precomputed inverse metric is specified via the \code{inv_metric} argument
+(or \code{metric_file}) then, if \code{adapt_engaged=TRUE}, Stan will use the
+provided inverse metric just as an initial guess during adaptation. To turn
+off adaptation when using a precomputed inverse metric set
+\code{adapt_engaged=FALSE}.
 \item \code{adapt_delta}: (real in \code{(0,1)}) The adaptation target acceptance
 statistic.
 \item \code{stepsize}: (positive real) The \emph{initial} step size for the discrete
 approximation to continuous Hamiltonian dynamics. This is further tuned
 during warmup.
-\item \code{metric}: (character) The geometry of the base manifold. See the
-\emph{Euclidean Metric} section of the CmdStan documentation for more details.
-One of the following:
-\itemize{
-\item A single string from among \code{"diag_e"}, \code{"dense_e"}, \code{"unit_e"}.
-\item A character vector containing paths to files (one per chain) compatible
-with CmdStan that contain precomputed metrics. Each path must be to a
-JSON or Rdump file that contains an entry \code{inv_metric} whose value is
-either the diagonal vector or the full covariance matrix. If
-\code{adapt_engaged=TRUE}, Stan will use the provided metric just as an
-initial guess during adaptation. To turn off adaptation when using a
-precomputed metric set \code{adapt_engaged=FALSE}.
-}
+\item \code{metric}: (character) One of \code{"diag_e"}, \code{"dense_e"}, or \code{"unit_e"},
+specifying the geometry of the base manifold. See the \emph{Euclidean Metric}
+section of the CmdStan documentation for more details. To specify a
+precomputed (inverse) metric, see the \code{inv_metric} argument below.
+\item \code{metric_file}: (character) A character vector containing paths to JSON or
+Rdump file files (one per chain) compatible with CmdStan that contain
+precomputed inverse metrics. The \code{metric_file} argument is inherited from
+CmdStan but is confusing in that the entry in JSON or Rdump file(s) must be
+named \code{inv_metric}, referring to the \emph{inverse} metric. We recommend instead
+using CmdStanR's \code{inv_metric} argument (see below) to specify an inverse
+metric directly using a vector or matrix from your \R session.
+\item \code{inv_metric}: (vector, matrix) A vector (if \code{metric='diag_e'}) or a
+matrix (if \code{metric='dense_e'}) for initializing the inverse metric, which
+can be used as an alternative to the \code{metric_file} argument. A vector is
+interpreted as a diagonal metric. The inverse metric is usually set to an
+estimate of the posterior covariance. See the \code{adapt_engaged} argument
+above for details (and control over) on how specifying a precomputed
+inverse metric interacts with adaptation.
 \item \code{max_depth}: (positive integer) The maximum allowed tree depth for the
 NUTS engine. See the \emph{Tree Depth} section of the CmdStan manual for more
 details.
+\item \code{init_buffer}: (non-negative integer) Width of initial fast timestep
+adaptation interval during warmup
+\item \code{term_buffer}: (non-negative integer) Width of final fast timestep
+adaptation interval during warmup
+\item \code{window}: (non-negative integer) Initial width of slow timestep/metric
+adaptation interval
 }
 }
 
@@ -144,8 +165,11 @@ mod$print()
 standata <- list(N = 10, y =c(0,1,0,0,0,0,0,0,0,1))
 fit_mcmc <- mod$sample(data = standata, seed = 123, num_chains = 2)
 
-# Call CmdStan's bin/summary
+# Call CmdStan's bin/stansummary
 fit_mcmc$summary()
+
+# Call CmdStan's bin/diagnose
+fit_mcmc$diagnose()
 
 # Run optimization method (default is Stan's LBFGS algorithm)
 # and also demonstrate specifying data as a path to a file (readable by CmdStan)
