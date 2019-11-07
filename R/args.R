@@ -184,19 +184,12 @@ SampleArgs <- R6::R6Class(
       self$stepsize <- stepsize # TODO: cmdstanpy uses step_size but cmdstan is stepsize
       self$adapt_engaged <- adapt_engaged
       self$adapt_delta <- adapt_delta
-<<<<<<< HEAD
 
       self$experimental <- experimental
       self$which_adaptation <- which_adaptation
-
-      if (metric_is_file(self$metric)) {
-        self$metric <- sapply(self$metric, repair_path)
-      }
-=======
       self$init_buffer <- init_buffer
       self$term_buffer <- term_buffer
       self$window <- window
->>>>>>> add-adapt-args
 
       if (is.logical(self$adapt_engaged)) {
         self$adapt_engaged <- as.integer(self$adapt_engaged)
