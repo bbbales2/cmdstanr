@@ -241,7 +241,9 @@ compile_method <- function(quiet = TRUE,
     wd = cmdstan_path(),
     echo_cmd = !quiet,
     echo = !quiet,
-    spinner = quiet
+    spinner = quiet,
+    stderr_line_callback = function(x,p) { if(quiet) message(x) },
+    error_on_status = TRUE
   )
 
   private$exe_file_ <- exe
@@ -275,12 +277,12 @@ CmdStanModel$set("public", name = "compile", value = compile_method)
 #'     save_warmup = FALSE,
 #'     thin = NULL,
 #'     max_depth = NULL,
+#'     adapt_engaged = TRUE,
+#'     adapt_delta = NULL,
+#'     stepsize = NULL,
 #'     metric = NULL,
 #'     metric_file = NULL,
 #'     inv_metric = NULL,
-#'     stepsize = NULL,
-#'     adapt_engaged = TRUE,
-#'     adapt_delta = NULL,
 #'     init_buffer = NULL,
 #'     term_buffer = NULL,
 #'     window = NULL
@@ -312,6 +314,9 @@ CmdStanModel$set("public", name = "compile", value = compile_method)
 #'   is `FALSE`.
 #'   * `thin`: (positive integer) The period between saved samples. This should
 #'   typically be left at its default (no thinning).
+#'   * `max_depth`: (positive integer) The maximum allowed tree depth for the
+#'   NUTS engine. See the _Tree Depth_ section of the CmdStan manual for more
+#'   details.
 #'   * `adapt_engaged`: (logical) Do warmup adaptation? The default is `TRUE`.
 #'   If a precomputed inverse metric is specified via the `inv_metric` argument
 #'   (or `metric_file`) then, if `adapt_engaged=TRUE`, Stan will use the
@@ -341,15 +346,12 @@ CmdStanModel$set("public", name = "compile", value = compile_method)
 #'   estimate of the posterior covariance. See the `adapt_engaged` argument
 #'   above for details (and control over) on how specifying a precomputed
 #'   inverse metric interacts with adaptation.
-#'   * `max_depth`: (positive integer) The maximum allowed tree depth for the
-#'   NUTS engine. See the _Tree Depth_ section of the CmdStan manual for more
-#'   details.
 #'   * `init_buffer`: (non-negative integer) Width of initial fast timestep
-#'   adaptation interval during warmup
+#'   adaptation interval during warmup.
 #'   * `term_buffer`: (non-negative integer) Width of final fast timestep
-#'   adaptation interval during warmup
+#'   adaptation interval during warmup.
 #'   * `window`: (non-negative integer) Initial width of slow timestep/metric
-#'   adaptation interval
+#'   adaptation interval.
 #'
 #' @section Value: The `$sample()` method returns a [`CmdStanMCMC`] object.
 #'
@@ -369,13 +371,13 @@ sample_method <- function(data = NULL,
                           num_samples = NULL,
                           save_warmup = FALSE,
                           thin = NULL,
+                          max_depth = NULL,
                           adapt_engaged = TRUE,
                           adapt_delta = NULL,
+                          stepsize = NULL,
                           metric = NULL,
                           metric_file = NULL,
                           inv_metric = NULL,
-                          stepsize = NULL,
-                          max_depth = NULL,
                           experimental = NULL,
                           which_adaptation = NULL,
                           init_buffer = NULL,
@@ -392,12 +394,12 @@ sample_method <- function(data = NULL,
     save_warmup = save_warmup,
     thin = thin,
     max_depth = max_depth,
+    adapt_engaged = adapt_engaged,
+    adapt_delta = adapt_delta,
+    stepsize = stepsize,
     metric = metric,
     metric_file = metric_file,
     inv_metric = inv_metric,
-    stepsize = stepsize,
-    adapt_engaged = adapt_engaged,
-    adapt_delta = adapt_delta,
     experimental = experimental,
     which_adaptation = which_adaptation,
     init_buffer = init_buffer,
@@ -520,7 +522,8 @@ optimize_method <- function(data = NULL,
     args = runset$command_args()[[1]],
     wd = dirname(self$exe_file()),
     echo_cmd = FALSE,
-    echo = TRUE
+    echo = TRUE,
+    error_on_status = TRUE
   )
   CmdStanMLE$new(runset)
 }
@@ -648,7 +651,8 @@ variational_method <- function(data = NULL,
     args = runset$command_args()[[1]],
     wd = dirname(self$exe_file()),
     echo_cmd = FALSE,
-    echo = TRUE
+    echo = TRUE,
+    error_on_status = TRUE
   )
   CmdStanVB$new(runset)
 }

@@ -12,9 +12,9 @@
 #'
 #' * `SampleArgs`: stores arguments specific to `method=sample`.
 #' * `OptimizeArgs`: stores arguments specific to `method=optimize`.
-#' * `FixedParamArgs`: not yet implemented.
+#' * `VariationalArgs`: stores arguments specific to `method=variational`
 #' * `GQArgs`: not yet implemented.
-#' * `VariationalArgs`: not yet implemented.
+#' * `FixedParamArgs`: not yet implemented.
 #'
 NULL
 
@@ -133,12 +133,12 @@ SampleArgs <- R6::R6Class(
                           save_warmup = NULL,
                           thin = NULL,
                           max_depth = NULL,
+                          adapt_engaged = NULL,
+                          adapt_delta = NULL,
+                          stepsize = NULL,
                           metric = NULL,
                           metric_file = NULL,
                           inv_metric = NULL,
-                          stepsize = NULL,
-                          adapt_engaged = NULL,
-                          adapt_delta = NULL,
                           experimental = NULL,
                           which_adaptation = NULL,
                           init_buffer = NULL,
@@ -153,6 +153,9 @@ SampleArgs <- R6::R6Class(
       self$save_warmup <- save_warmup
       self$thin <- thin
       self$max_depth <- max_depth
+      self$adapt_engaged <- adapt_engaged
+      self$adapt_delta <- adapt_delta
+      self$stepsize <- stepsize # TODO: cmdstanpy uses step_size but cmdstan is stepsize
       self$metric <- metric
       self$inv_metric <- inv_metric
       if (!is.null(inv_metric)) {
@@ -181,9 +184,6 @@ SampleArgs <- R6::R6Class(
       } else if (!is.null(metric_file)) {
         self$metric_file <- sapply(metric_file, absolute_path)
       }
-      self$stepsize <- stepsize # TODO: cmdstanpy uses step_size but cmdstan is stepsize
-      self$adapt_engaged <- adapt_engaged
-      self$adapt_delta <- adapt_delta
 
       self$experimental <- experimental
       self$which_adaptation <- which_adaptation
@@ -356,18 +356,6 @@ VariationalArgs <- R6::R6Class(
     }
   )
 )
-
-# FixedParamArgs -------------------------------------------------------------
-
-# FixedParamArgs <- R6::R6Class(
-#   "FixedParamArgs",
-#   public = list(
-#     method = "fixed_param",
-#     compose = function(idx, args = NULL) c(args, "method=fixed_param"),
-#     validate = function(num_runs) invisible(self)
-#   )
-# )
-
 
 
 # Validate the 'Args' objects --------------------------------------------

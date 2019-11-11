@@ -1,7 +1,5 @@
 # Setup -------------------------------------------------------------------
-NOT_CRAN <-
-  identical(Sys.getenv("NOT_CRAN"), "true") ||
-  identical(Sys.getenv("TRAVIS"), "true")
+NOT_CRAN <- identical(Sys.getenv("NOT_CRAN"), "true")
 
 if (NOT_CRAN) {
   set_cmdstan_path()
@@ -67,11 +65,11 @@ test_that("error if no compile() before sample()", {
 
 test_that("compile() method works", {
   skip_on_cran()
-  expected <- if (!file.exists(strip_ext(mod$stan_file())))
+  expected <- if (!file.exists(cmdstan_ext(strip_ext(mod$stan_file()))))
     "Translating Stan model" else "is up to date"
   out <- utils::capture.output(mod$compile(quiet = FALSE))
   expect_output(print(out), expected)
-  expect_equal(mod$exe_file(), strip_ext(stan_program))
+  expect_equal(mod$exe_file(), cmdstan_ext(strip_ext(stan_program)))
 })
 
 test_that("compilation works when stan program not in cmdstan dir", {
@@ -82,7 +80,7 @@ test_that("compilation works when stan program not in cmdstan dir", {
     mod_2 <- cmdstan_model(stan_file = stan_program_2, quiet = TRUE),
     "Compiling Stan program..."
   )
-  expect_equal(mod_2$exe_file(), strip_ext(absolute_path(stan_program_2)))
+  expect_equal(mod_2$exe_file(), cmdstan_ext(strip_ext(absolute_path(stan_program_2))))
 
   out <- utils::capture.output(
     mod_2 <- suppressMessages(cmdstan_model(stan_file = stan_program_2, quiet = FALSE))
@@ -185,7 +183,6 @@ if (NOT_CRAN) {
   )
 
   bad_arg_values_3 <- list(
-    data_file = rep("NOT_A_FILE", 5),
     init = rep("NOT_A_FILE", 10),
     metric = c("AA", "BB", "CC")
   )

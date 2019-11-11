@@ -7,8 +7,8 @@
 #' @template seealso-docs
 #'
 #' @description A `CmdStanMCMC` object is the fitted model object returned by
-#'   the [`sample()`][model-method-sample] method of a [`CmdStanModel`]
-#'   object. Like `CmdStanModel` objects, `CmdStanMCMC` objects are [R6][R6::R6]
+#'   the [`$sample()`][model-method-sample] method of a [`CmdStanModel`] object.
+#'   Like `CmdStanModel` objects, `CmdStanMCMC` objects are [R6][R6::R6]
 #'   objects.
 #'
 #' @details
@@ -48,7 +48,8 @@ CmdStanMCMC <- R6::R6Class(
         args = self$output_files(),
         wd = cmdstan_path(),
         echo_cmd = TRUE,
-        echo = TRUE
+        echo = TRUE,
+        error_on_status = TRUE
       )
     },
     diagnose = function() {
@@ -60,7 +61,8 @@ CmdStanMCMC <- R6::R6Class(
         args = self$output_files(),
         wd = cmdstan_path(),
         echo_cmd = TRUE,
-        echo = TRUE
+        echo = TRUE,
+        error_on_status = TRUE
       )
     },
     draws = function() {
@@ -211,7 +213,8 @@ CmdStanVB <- R6::R6Class(
         args = self$output_files(),
         wd = cmdstan_path(),
         echo_cmd = TRUE,
-        echo = TRUE
+        echo = TRUE,
+        error_on_status = TRUE
       )
     },
     draws = function() {
