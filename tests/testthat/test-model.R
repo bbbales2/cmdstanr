@@ -12,34 +12,9 @@ if (NOT_CRAN) {
   data_file_json <- test_path("resources", "data", "bernoulli.data.json")
 }
 
-expect_experimental_warning <- function(object) {
-  testthat::expect_warning(
-    object,
-    regexp = "experimental and the structure of returned object may change"
-  )
-}
-expect_sample_output <- function(object) {
-  testthat::expect_output(object, "Gradient evaluation took")
-}
-expect_optim_output <- function(object) {
-  expect_experimental_warning(
-    expect_output(
-      object,
-      regexp = "Initial log joint probability"
-    )
-  )
-}
-expect_vb_output <- function(object) {
-  expect_experimental_warning(
-    expect_output(
-      object,
-      regexp = "Drawing a sample of size"
-    )
-  )
-}
 
 # Compile -----------------------------------------------------------------
-context("CmdStanModel-compile")
+context("model-compile")
 
 test_that("object initialized correctly", {
   skip_on_cran()
@@ -121,7 +96,7 @@ test_that("compilation works with include_paths", {
 
 
 # Sample ------------------------------------------------------------------
-context("CmdStanModel-sample")
+context("model-sample")
 
 if (NOT_CRAN) {
   if (!length(mod$exe_file())) {
@@ -132,6 +107,7 @@ if (NOT_CRAN) {
   ok_arg_values <- list(
     data = data_list,
     num_chains = 2,
+    num_cores = 1,
     num_warmup = 50,
     num_samples = 100,
     save_warmup = FALSE,
@@ -154,6 +130,7 @@ if (NOT_CRAN) {
   bad_arg_values <- list(
     data = "NOT_A_FILE",
     num_chains = -1,
+    num_cores = -1,
     num_warmup = -1,
     num_samples = -1,
     save_warmup = "NO",
@@ -173,6 +150,8 @@ if (NOT_CRAN) {
   )
 
   bad_arg_values_2 <- list(
+    num_chains = "NOT_A_NUMBER",
+    num_cores = "NOT_A_NUMBER",
     init = "NOT_A_FILE",
     seed = 1:10,
     stepsize = 1:10,
@@ -191,17 +170,17 @@ if (NOT_CRAN) {
 test_that("sample() method works with data list", {
   skip_on_cran()
 
-  expect_sample_output(fit <- mod$sample(data = data_list, num_chains = 1))
+  expect_sample_output(fit <- mod$sample(data = data_list, num_chains = 1), 1)
   expect_is(fit, "CmdStanMCMC")
 })
 
 test_that("sample() method works with data files", {
   skip_on_cran()
 
-  expect_sample_output(fit_r <- mod$sample(data = data_file_r, num_chains = 1))
+  expect_sample_output(fit_r <- mod$sample(data = data_file_r, num_chains = 1), 1)
   expect_is(fit_r, "CmdStanMCMC")
 
-  expect_sample_output(fit_json <- mod$sample(data = data_file_json, num_chains = 1))
+  expect_sample_output(fit_json <- mod$sample(data = data_file_json, num_chains = 1), 1)
   expect_is(fit_json, "CmdStanMCMC")
 })
 
@@ -216,13 +195,13 @@ test_that("sample() method works with init file", {
     fileext = ".json"
   )
   write_stan_json(init_list, file = init_file)
-  expect_sample_output(mod$sample(data = data_file_r, init = init_file))
+  expect_sample_output(mod$sample(data = data_file_r, init = init_file, num_chains = 1), 1)
 })
 
 test_that("sample() method runs when all arguments specified", {
   skip_on_cran()
 
-  expect_sample_output(fit <- do.call(mod$sample, ok_arg_values))
+  expect_sample_output(fit <- do.call(mod$sample, ok_arg_values), 2)
   expect_is(fit, "CmdStanMCMC")
 })
 
@@ -252,7 +231,7 @@ test_that("sample() method errors for any invalid arguments before calling cmdst
 
 
 # Optimize ----------------------------------------------------------------
-context("CmdStanModel-optimize")
+context("model-optimize")
 
 if (NOT_CRAN) {
   # these are all valid for optimize()
@@ -319,7 +298,7 @@ test_that("optimize() errors when combining 'newton' with 'init_alpha'", {
 
 
 # Variational -------------------------------------------------------------
-context("CmdStanModel-variational")
+context("model-variational")
 
 if (NOT_CRAN) {
   # these are all valid for variational()

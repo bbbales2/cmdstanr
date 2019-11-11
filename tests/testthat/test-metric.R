@@ -1,3 +1,5 @@
+context("model-sample-metric")
+
 # Setup -------------------------------------------------------------------
 NOT_CRAN <- identical(Sys.getenv("NOT_CRAN"), "true")
 
@@ -9,12 +11,8 @@ if (NOT_CRAN) {
   data_list <- list(N = 10, y = c(0,1,0,0,0,0,0,0,0,1))
 }
 
-expect_sample_output <- function(object) {
-  testthat::expect_output(object, "Gradient evaluation took")
-}
 
-# Sample ------------------------------------------------------------------
-context("CmdStanModel-sample-with-metric")
+# test metric argument ----------------------------------------------------
 
 test_that("sample() method works with provided inv_metrics", {
   skip_on_cran()
@@ -54,7 +52,8 @@ test_that("sample() method works with provided inv_metrics", {
                                            metric_file = inv_metric_vector_r))
 
   expect_sample_output(fit_r <- mod$sample(data = data_list,
-                                           num_chains = 1,
+                                           num_chains = 3,
+                                           num_cores = 2,
                                            metric = "dense_e",
                                            metric_file = inv_metric_matrix_r))
 })
@@ -78,6 +77,7 @@ test_that("sample() method works with lists of inv_metrics", {
 
   expect_error(fit_r <- mod$sample(data = data_list,
                                    num_chains = 3,
+                                   num_cores = 2,
                                    metric = "diag_e",
                                    inv_metric = list(inv_metric_vector, inv_metric_vector)),
                "2 metric\\(s\\) provided. Must provide 1 or 3 metric\\(s\\) for 3 chain\\(s\\)")
@@ -99,6 +99,7 @@ test_that("sample() method works with lists of inv_metrics", {
 
   expect_error(fit_r <- mod$sample(data = data_list,
                                    num_chains = 3,
+                                   num_cores = 2,
                                    metric = "diag_e",
                                    metric_file = c(inv_metric_vector_json, inv_metric_vector_json)),
                "2 metric\\(s\\) provided. Must provide 1 or 3 metric\\(s\\) for 3 chain\\(s\\)")
