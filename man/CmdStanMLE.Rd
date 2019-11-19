@@ -9,7 +9,7 @@ A \code{CmdStanMLE} object is the fitted model object returned by the
 object.
 }
 \details{
-\code{CmdStanMLE} objects have the following associated methods:
+\code{CmdStanMLE} objects have the following methods:
 
 \tabular{ll}{
 \strong{Method} \tab \strong{Description} \cr
@@ -32,7 +32,8 @@ The Stan and CmdStan documentation:
 \item CmdStan doc (pdf): (\href{https://github.com/stan-dev/cmdstan/releases/latest}{github.com/stan-dev/cmdstan/releases/}).
 }
 
-Other fitted model objects: \code{\link{CmdStanMCMC}},
-  \code{\link{CmdStanVB}}
+Other fitted model objects: 
+\code{\link{CmdStanMCMC}},
+\code{\link{CmdStanVB}}
 }
 \concept{fitted model objects}

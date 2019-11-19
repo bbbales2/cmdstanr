@@ -10,20 +10,24 @@ Like \code{CmdStanModel} objects, \code{CmdStanMCMC} objects are \link[R6:R6]{R6
 objects.
 }
 \details{
-\code{CmdStanMCMC} objects have the following associated methods:
+\code{CmdStanMCMC} objects have the following methods:
 
 \tabular{ll}{
 \strong{Method} \tab \strong{Description} \cr
-\code{summary} \tab Run and print CmdStan's \code{bin/stansummary}. \cr
-\code{diagnose} \tab Run and print CmdStan's \code{bin/diagnose}. \cr
+\code{draws} \tab Return post-warmup draws as a
+\code{\link[posterior:draws_array]{draws_array}} object.\cr
+\code{\link[=fit-method-summary]{summary}}
+\tab Run \code{\link[posterior:summarise_draws]{posterior::summarise_draws()}}. \cr
+\code{\link[=fit-method-cmdstan_summary]{cmdstan_summary}}
+\tab Run and print CmdStan's \code{bin/stansummary}. \cr
+\code{\link[=fit-method-cmdstan_summary]{cmdstan_diagnose}}
+\tab Run and print CmdStan's \code{bin/diagnose}. \cr
 \code{\link[=fit-method-save_output_files]{save_output_files}}
 \tab Save output CSV files to a specified location. \cr
 \code{\link[=fit-method-save_data_file]{save_data_file}}
 \tab Save JSON data file to a specified location. \cr
 \code{\link[=fit-method-save_diagnostic_files]{save_diagnostic_files}}
 \tab Save diagnostic CSV files to a specified location. \cr
-\code{draws} \tab
-Return post-warmup draws as an \code{iters x chains x variables} array. \cr
 \code{time} \tab Return a list containing the total time and a data frame of
 execution times of all chains. \cr
 \code{output} \tab Return the stdout and stderr of all chains as a list of
@@ -41,7 +45,8 @@ The Stan and CmdStan documentation:
 \item CmdStan doc (pdf): (\href{https://github.com/stan-dev/cmdstan/releases/latest}{github.com/stan-dev/cmdstan/releases/}).
 }
 
-Other fitted model objects: \code{\link{CmdStanMLE}},
-  \code{\link{CmdStanVB}}
+Other fitted model objects: 
+\code{\link{CmdStanMLE}},
+\code{\link{CmdStanVB}}
 }
 \concept{fitted model objects}

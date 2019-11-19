@@ -4,7 +4,7 @@
 \alias{model-method-optimize}
 \title{Run Stan's optimization algorithms}
 \description{
-The \code{$optimize()} method of a \code{\link{CmdStanModel}} object runs
+The \verb{$optimize()} method of a \code{\link{CmdStanModel}} object runs
 Stan's optimizer.
 }
 \details{
@@ -15,7 +15,7 @@ optimization, the mode is calculated without the Jacobian adjustment for
 constrained variables, which shifts the mode due to the change of
 variables. Thus modes correspond to modes of the model as written.
 
--- \href{https://github.com/stan-dev/cmdstan/releases/latest}{CmdStan Interface User's Guide}
+-- \href{https://github.com/stan-dev/cmdstan/releases/latest}{\emph{CmdStan Interface User's Guide}}
 }
 \section{Usage}{
 \preformatted{$optimize(
@@ -49,7 +49,7 @@ the appendices in the CmdStan manual for details on using these formats.
 printed screen updates.
 \item \code{init}: (multiple options) The initialization method:
 \itemize{
-\item A real number \code{x>0} initializes randomly between \code{[-x,x]} (on the
+\item A real number \code{x>0} initializes randomly between \verb{[-x,x]} (on the
 \emph{unconstrained} parameter space);
 \item \code{0} initializes to \code{0};
 \item A character vector of paths (one per chain) to JSON or Rdump files. See
@@ -71,7 +71,7 @@ divergences for HMC). To save the temporary files created when
 
 \section{Arguments unique to the \code{optimize} method}{
  In addition to the
-arguments above, the \code{$optimize()} method also has its own set of
+arguments above, the \verb{$optimize()} method also has its own set of
 arguments. These arguments are described briefly here and in greater detail
 in the CmdStan manual. Arguments left at \code{NULL} default to the default used
 by the installed version of CmdStan.
@@ -79,13 +79,13 @@ by the installed version of CmdStan.
 \item \code{algorithm}: (string) The optimization algorithm. One of \code{"lbfgs"},
 \code{"bfgs"}, or \code{"newton"}.
 \item \code{iter}: (positive integer) The number of iterations.
-\item \code{init_alpha}: (non-negative real) The line search step size for first
+\item \code{init_alpha}: (nonnegative real) The line search step size for first
 iteration. Not applicable if \code{algorithm="newton"}.
 }
 }
 
 \section{Value}{
- The \code{$optimize()} method returns a \code{\link{CmdStanMLE}} object.
+ The \verb{$optimize()} method returns a \code{\link{CmdStanMLE}} object.
 }
 
 \examples{
@@ -113,11 +113,14 @@ fit_mcmc <- mod$sample(
   num_cores = 2
 )
 
-# Call CmdStan's bin/stansummary
+# Use 'posterior' package for summaries
 fit_mcmc$summary()
 
+# Call CmdStan's bin/stansummary
+fit_mcmc$cmdstan_summary()
+
 # Call CmdStan's bin/diagnose
-fit_mcmc$diagnose()
+fit_mcmc$cmdstan_diagnose()
 
 # For models fit using MCMC, if you like working with RStan's stanfit objects
 # then you can create one with rstan::read_stan_csv()
@@ -154,8 +157,9 @@ The Stan and CmdStan documentation:
 \item CmdStan doc (pdf): (\href{https://github.com/stan-dev/cmdstan/releases/latest}{github.com/stan-dev/cmdstan/releases/}).
 }
 
-Other CmdStanModel methods: \code{\link{model-method-compile}},
-  \code{\link{model-method-sample}},
-  \code{\link{model-method-variational}}
+Other CmdStanModel methods: 
+\code{\link{model-method-compile}},
+\code{\link{model-method-sample}},
+\code{\link{model-method-variational}}
 }
 \concept{CmdStanModel methods}

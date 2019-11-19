@@ -14,7 +14,7 @@ compilation can be done later via the \code{\link[=model-method-compile]{$compil
 method.}
 
 \item{...}{Optionally, additional arguments to pass to the
-\code{\link[=model-method-compile]{$compile()}} method. Ignored if \code{compile=FALSE}.}
+\code{\link[=model-method-compile]{$compile()}} method if \code{compile=TRUE}.}
 }
 \value{
 A \code{\link{CmdStanModel}} object.
@@ -49,11 +49,14 @@ fit_mcmc <- mod$sample(
   num_cores = 2
 )
 
-# Call CmdStan's bin/stansummary
+# Use 'posterior' package for summaries
 fit_mcmc$summary()
 
+# Call CmdStan's bin/stansummary
+fit_mcmc$cmdstan_summary()
+
 # Call CmdStan's bin/diagnose
-fit_mcmc$diagnose()
+fit_mcmc$cmdstan_diagnose()
 
 # For models fit using MCMC, if you like working with RStan's stanfit objects
 # then you can create one with rstan::read_stan_csv()

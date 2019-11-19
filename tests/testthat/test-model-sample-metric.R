@@ -1,18 +1,10 @@
 context("model-sample-metric")
 
-# Setup -------------------------------------------------------------------
-NOT_CRAN <- identical(Sys.getenv("NOT_CRAN"), "true")
-
-if (NOT_CRAN) {
+if (not_on_cran()) {
   set_cmdstan_path()
-  stan_program <- file.path(cmdstan_path(), "examples", "bernoulli", "bernoulli.stan")
-  mod <- cmdstan_model(stan_file = stan_program)
-
-  data_list <- list(N = 10, y = c(0,1,0,0,0,0,0,0,0,1))
+  mod <- cmdstan_model(stan_file = beroulli_example_file())
+  data_list <- bernoulli_example_data()
 }
-
-
-# test metric argument ----------------------------------------------------
 
 test_that("sample() method works with provided inv_metrics", {
   skip_on_cran()
@@ -20,11 +12,11 @@ test_that("sample() method works with provided inv_metrics", {
   inv_metric_vector <- array(1, dim = c(1))
   inv_metric_matrix <- matrix(1, nrow = 1, ncol = 1)
 
-  inv_metric_vector_json <- test_path("resources", "data", "bernoulli.inv_metric.diag_e.json")
-  inv_metric_matrix_json <- test_path("resources", "data", "bernoulli.inv_metric.dense_e.json")
+  inv_metric_vector_json <- test_path("resources", "metric", "bernoulli.inv_metric.diag_e.json")
+  inv_metric_matrix_json <- test_path("resources", "metric", "bernoulli.inv_metric.dense_e.json")
 
-  inv_metric_vector_r <- test_path("resources", "data", "bernoulli.inv_metric.diag_e.data.R")
-  inv_metric_matrix_r <- test_path("resources", "data", "bernoulli.inv_metric.dense_e.data.R")
+  inv_metric_vector_r <- test_path("resources", "metric", "bernoulli.inv_metric.diag_e.data.R")
+  inv_metric_matrix_r <- test_path("resources", "metric", "bernoulli.inv_metric.dense_e.data.R")
 
   expect_sample_output(fit_r <- mod$sample(data = data_list,
                                            num_chains = 1,
@@ -63,7 +55,7 @@ test_that("sample() method works with lists of inv_metrics", {
   skip_on_cran()
 
   inv_metric_vector <- array(1, dim = c(1))
-  inv_metric_vector_json <- test_path("resources", "data", "bernoulli.inv_metric.diag_e.json")
+  inv_metric_vector_json <- test_path("resources", "metric", "bernoulli.inv_metric.diag_e.json")
 
   expect_sample_output(fit_r <- mod$sample(data = data_list,
                                            num_chains = 1,
@@ -109,7 +101,7 @@ test_that("sample() method fails if metric_file and inv_metric both provided", {
   skip_on_cran()
 
   inv_metric_vector <- array(1, dim = c(1))
-  inv_metric_vector_json <- test_path("resources", "data", "bernoulli.inv_metric.diag_e.json")
+  inv_metric_vector_json <- test_path("resources", "metric", "bernoulli.inv_metric.diag_e.json")
 
   expect_error(mod$sample(data = data_file_r,
                           num_chains = 1,

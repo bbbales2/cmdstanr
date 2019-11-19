@@ -4,8 +4,8 @@
 \alias{model-method-sample}
 \title{Run Stan's MCMC algorithms}
 \description{
-The \code{$sample()} method of a \code{\link{CmdStanModel}} object runs the
-default MCMC algorithm in CmdStan (\code{algorithm=hmc engine=nuts}), to produce
+The \verb{$sample()} method of a \code{\link{CmdStanModel}} object runs the
+default MCMC algorithm in CmdStan (\verb{algorithm=hmc engine=nuts}), to produce
 a set of draws from the posterior distribution of a model conditioned on
 some data.
 }
@@ -54,7 +54,7 @@ the appendices in the CmdStan manual for details on using these formats.
 printed screen updates.
 \item \code{init}: (multiple options) The initialization method:
 \itemize{
-\item A real number \code{x>0} initializes randomly between \code{[-x,x]} (on the
+\item A real number \code{x>0} initializes randomly between \verb{[-x,x]} (on the
 \emph{unconstrained} parameter space);
 \item \code{0} initializes to \code{0};
 \item A character vector of paths (one per chain) to JSON or Rdump files. See
@@ -76,7 +76,7 @@ divergences for HMC). To save the temporary files created when
 
 \section{Arguments unique to the \code{sample} method}{
  In addition to the
-arguments above, the \code{$sample()} method also has its own set of arguments.
+arguments above, the \verb{$sample()} method also has its own set of arguments.
 
 The following two arguments are offered by CmdStanR but do not correspond
 to arguments in CmdStan because all CmdStan arguments pertain to the
@@ -103,7 +103,7 @@ per chain.
 \item \code{save_warmup}: (logical) Should warmup iterations be saved? The default
 is \code{FALSE}.
 \item \code{thin}: (positive integer) The period between saved samples. This should
-typically be left at its default (no thinning).
+typically be left at its default (no thinning) unless memory is a problem.
 \item \code{max_depth}: (positive integer) The maximum allowed tree depth for the
 NUTS engine. See the \emph{Tree Depth} section of the CmdStan manual for more
 details.
@@ -113,7 +113,7 @@ If a precomputed inverse metric is specified via the \code{inv_metric} argument
 provided inverse metric just as an initial guess during adaptation. To turn
 off adaptation when using a precomputed inverse metric set
 \code{adapt_engaged=FALSE}.
-\item \code{adapt_delta}: (real in \code{(0,1)}) The adaptation target acceptance
+\item \code{adapt_delta}: (real in \verb{(0,1)}) The adaptation target acceptance
 statistic.
 \item \code{stepsize}: (positive real) The \emph{initial} step size for the discrete
 approximation to continuous Hamiltonian dynamics. This is further tuned
@@ -134,19 +134,19 @@ matrix (if \code{metric='dense_e'}) for initializing the inverse metric, which
 can be used as an alternative to the \code{metric_file} argument. A vector is
 interpreted as a diagonal metric. The inverse metric is usually set to an
 estimate of the posterior covariance. See the \code{adapt_engaged} argument
-above for details (and control over) on how specifying a precomputed
+above for details on (and control over) how specifying a precomputed
 inverse metric interacts with adaptation.
-\item \code{init_buffer}: (non-negative integer) Width of initial fast timestep
+\item \code{init_buffer}: (nonnegative integer) Width of initial fast timestep
 adaptation interval during warmup.
-\item \code{term_buffer}: (non-negative integer) Width of final fast timestep
+\item \code{term_buffer}: (nonnegative integer) Width of final fast timestep
 adaptation interval during warmup.
-\item \code{window}: (non-negative integer) Initial width of slow timestep/metric
+\item \code{window}: (nonnegative integer) Initial width of slow timestep/metric
 adaptation interval.
 }
 }
 
 \section{Value}{
- The \code{$sample()} method returns a \code{\link{CmdStanMCMC}} object.
+ The \verb{$sample()} method returns a \code{\link{CmdStanMCMC}} object.
 }
 
 \examples{
@@ -174,11 +174,14 @@ fit_mcmc <- mod$sample(
   num_cores = 2
 )
 
-# Call CmdStan's bin/stansummary
+# Use 'posterior' package for summaries
 fit_mcmc$summary()
 
+# Call CmdStan's bin/stansummary
+fit_mcmc$cmdstan_summary()
+
 # Call CmdStan's bin/diagnose
-fit_mcmc$diagnose()
+fit_mcmc$cmdstan_diagnose()
 
 # For models fit using MCMC, if you like working with RStan's stanfit objects
 # then you can create one with rstan::read_stan_csv()
@@ -215,8 +218,9 @@ The Stan and CmdStan documentation:
 \item CmdStan doc (pdf): (\href{https://github.com/stan-dev/cmdstan/releases/latest}{github.com/stan-dev/cmdstan/releases/}).
 }
 
-Other CmdStanModel methods: \code{\link{model-method-compile}},
-  \code{\link{model-method-optimize}},
-  \code{\link{model-method-variational}}
+Other CmdStanModel methods: 
+\code{\link{model-method-compile}},
+\code{\link{model-method-optimize}},
+\code{\link{model-method-variational}}
 }
 \concept{CmdStanModel methods}

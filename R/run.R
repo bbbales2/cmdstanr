@@ -15,7 +15,7 @@ CmdStanRun <- R6::R6Class(
       self$args <- args
       self$procs <- procs
       private$output_files_ <- self$new_output_files()
-      if (self$save_diagnostics()) {
+      if (self$args$save_diagnostics) {
         private$diagnostic_files_ <- self$new_diagnostic_files()
       }
       invisible(self)
@@ -29,9 +29,7 @@ CmdStanRun <- R6::R6Class(
     model_name = function() self$args$model_name,
     method = function() self$args$method,
     csv_basename = function() self$args$csv_basename(),
-    console_files = function() private$console_files_,
     data_file = function() self$args$data_file,
-    save_diagnostics = function() self$args$save_diagnostics,
     new_output_files = function() self$args$new_output_files(),
     new_diagnostic_files = function() self$args$new_diagnostic_files(),
     diagnostic_files = function() {
@@ -52,39 +50,69 @@ CmdStanRun <- R6::R6Class(
     },
     save_output_files = function(dir = ".",
                                  basename = NULL,
-                                 timestamp = TRUE) {
-      copy_temp_files(
-        current_paths = self$output_files(),
+                                 timestamp = TRUE,
+                                 random = TRUE) {
+      # FIXME use self$output_files(include_failed=TRUE) once #76 is fixed
+      current_files <- private$output_files_
+      new_paths <- copy_temp_files(
+        current_paths = current_files,
         new_dir = dir,
         new_basename = basename %||% self$model_name(),
         ids = self$run_ids(),
         ext = ".csv",
-        timestamp = timestamp
+        timestamp = timestamp,
+        random = random
       )
+      file.remove(current_files[!current_files %in% new_paths])
+      private$output_files_ <- new_paths
+      message("Moved ", length(current_files),
+              " output files and set internal paths to new locations:\n",
+              paste("-", new_paths, collapse = "\n"))
+      invisible(new_paths)
     },
     save_diagnostic_files = function(dir = ".",
                                      basename = NULL,
-                                     timestamp = TRUE) {
-      copy_temp_files(
-        current_paths = self$diagnostic_files(),
+                                     timestamp = TRUE,
+                                     random = TRUE) {
+      # FIXME use self$diagnostic_files(include_failed=TRUE) once #76 is fixed
+      current_files <- self$diagnostic_files() # used so we get error if 0 files
+      current_files <- private$diagnostic_files_ # used so we still save all of them
+      new_paths <- copy_temp_files(
+        current_paths = current_files,
         new_dir = dir,
         new_basename = paste0(basename %||% self$model_name(), "-diagnostic"),
         ids = self$run_ids(),
         ext = ".csv",
-        timestamp = timestamp
+        timestamp = timestamp,
+        random = random
       )
+      file.remove(current_files[!current_files %in% new_paths])
+      private$diagnostic_files_ <- new_paths
+      message("Moved ", length(current_files),
+              " diagnostic files and set internal paths to new locations:\n",
+              paste("-", new_paths, collapse = "\n"))
+      invisible(new_paths)
     },
     save_data_file = function(dir = ".",
                               basename = NULL,
-                              timestamp = TRUE) {
-      copy_temp_files(
+                              timestamp = TRUE,
+                              random = TRUE) {
+      new_path <- copy_temp_files(
         current_paths = self$data_file(),
         new_dir = dir,
         new_basename = basename %||% self$model_name(),
         ids = NULL,
-        ext = ".json",
-        timestamp = timestamp
+        ext = tools::file_ext(self$data_file()),
+        timestamp = timestamp,
+        random = random
       )
+      if (new_path != self$data_file()) {
+        file.remove(self$data_file())
+      }
+      self$args$data_file <- new_path
+      message("Moved data file and set internal path to new location:\n",
+              "- ", new_path)
+      invisible(new_path)
     },
 
     command = function() self$args$command(),
@@ -110,6 +138,27 @@ CmdStanRun <- R6::R6Class(
       } else if (self$method() == "variational") {
         private$run_variational_()
       }
+    },
+
+    # run bin/stansummary or bin/diagnose
+    # @param tool The name of the tool in `bin/` to run.
+    # @param flags An optional character vector of flags (e.g. c("--sig_figs=1")).
+    run_cmdstan_tool = function(tool = c("stansummary", "diagnose"), flags = NULL) {
+      tool <- match.arg(tool)
+      if (!length(self$output_files())) {
+        stop("No CmdStan runs finished successfully. ",
+             "Unable to run bin/", tool, ".", call. = FALSE)
+      }
+      target_exe = file.path("bin", cmdstan_ext(tool))
+      check_target_exe(target_exe)
+      run_log <- processx::run(
+        command = target_exe,
+        args = c(self$output_files(), flags),
+        wd = cmdstan_path(),
+        echo_cmd = TRUE,
+        echo = TRUE,
+        error_on_status = TRUE
+      )
     },
 
     time = function() {
@@ -374,9 +423,9 @@ CmdStanProcs <- R6::R6Class(
     },
     is_error_message = function(line) {
       startsWith(line, "Exception:") ||
-      (regexpr(line, "either mistyped or misplaced.") > 0) ||
-      (regexpr(line, "A method must be specified!") > 0) ||
-      (regexpr(line, "is not a valid value for") > 0)
+      (regexpr("either mistyped or misplaced.", line, perl = TRUE) > 0) ||
+      (regexpr("A method must be specified!", line, perl = TRUE) > 0) ||
+      (regexpr("is not a valid value for", line, perl = TRUE) > 0)
     },
     process_sample_output = function(out, id) {
       id <- as.character(id)
@@ -389,22 +438,22 @@ CmdStanProcs <- R6::R6Class(
           last_section_start_time <- private$chain_info_[id,"last_section_start_time"]
           state <- private$chain_info_[id,"state"]
           next_state <- state
-          if (state == 1 && regexpr("Iteration:", line) > 0) {
+          if (state == 1 && regexpr("Iteration:", line, perl = TRUE) > 0) {
             state <- 2
             next_state <- 2
             private$chain_info_[id,"last_section_start_time"] <- Sys.time()
           }
-          if (state == 1 && regexpr("Elapsed Time:", line) > 0) {
+          if (state == 1 && regexpr("Elapsed Time:", line, perl = TRUE) > 0) {
             state <- 4
             next_state <- 4
           }
           if (private$chain_info_[id,"state"] == 2 &&
-              regexpr("(Sampling)", line) > 0) {
+              regexpr("(Sampling)", line, perl = TRUE) > 0) {
             next_state <- 3 # 3 = sampling
             private$chain_info_[id,"warmup_time"] <- Sys.time() - last_section_start_time
             private$chain_info_[id,"last_section_start_time"] <- Sys.time()
           }
-          if (regexpr("\\[100%\\]", line) > 0) {
+          if (regexpr("\\[100%\\]", line, perl = TRUE) > 0) {
             if (state == 2) { #warmup only run
               private$chain_info_[id,"warmup_time"] <- Sys.time() - last_section_start_time
             } else if (state == 3) { # sampling

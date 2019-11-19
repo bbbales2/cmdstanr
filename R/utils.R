@@ -52,7 +52,7 @@ repair_path <- function(path) {
   path <- path.expand(path)
   path <- gsub("\\\\", "/", path)
   path <- gsub("//", "/", path)
-  if (substr(path, nchar(path), nchar(path)) == "/") {
+  if (endsWith(path, "/")) {
     # remove trailing "/" (is this necessary?)
     path <- substr(path, 1, nchar(path) - 1)
   }
@@ -95,12 +95,6 @@ absolute_path <- function(path) {
 absolute_path <- Vectorize(absolute_path, USE.NAMES = FALSE)
 
 
-# Change extension from a file path
-change_ext <- function(file, ext) {
-  out <- strip_ext(file)
-  paste0(out, ext)
-}
-
 
 # read, write, and copy files --------------------------------------------
 
@@ -125,19 +119,32 @@ copy_temp_files <-
            new_basename,
            ids = NULL,
            timestamp = TRUE,
+           random = TRUE,
            ext = ".csv") {
     checkmate::assert_directory_exists(new_dir, access = "w")
 
     new_names <- new_basename
-    if (!is.null(ids)) {
-      new_names <- paste0(new_basename, "-", ids)
-    }
     if (timestamp) {
-      stamp <- format(Sys.time(), "%Y%m%d-%H%M")
-      new_names <- paste0(new_names, "_", stamp)
+      stamp <- format(Sys.time(), "%Y%m%d%H%M")
+      new_names <- paste0(new_names, "-", stamp)
     }
+    if (!is.null(ids)) {
+      new_names <- paste0(new_names, "-", ids)
+    }
+
+    if (random) {
+      tf <- tempfile()
+      rand <- substr(tf, nchar(tf) - 4, nchar(tf))
+      new_names <- paste0(new_names, "-", rand)
+    }
+
+    ext <- if (startsWith(ext, ".")) ext else paste0(".", ext)
     new_names <- paste0(new_names, ext)
-    destinations <- file.path(new_dir, new_names)
+    if (new_dir == ".") {
+      destinations <- new_names
+    } else {
+      destinations <- file.path(new_dir, new_names)
+    }
 
     copied <- file.copy(
       from = current_paths,
@@ -147,7 +154,7 @@ copy_temp_files <-
     if (!all(copied)) {
       destinations[!copied] <- NA_character_
     }
-    destinations
+    absolute_path(destinations)
   }
 
 
@@ -200,12 +207,12 @@ list_to_array <- function(x) {
   element_dim <- length(x[[1]])
   check_equal_dim <- function(x, target_dim) { !is.null(element_dim) && length(x) == target_dim }
   all_same_size <- all(sapply(x, check_equal_dim, target_dim = element_dim))
-  if(!all_same_size) {
-    stop("All matrices/vectors in the list must be the same size!")
+  if (!all_same_size) {
+    stop("All matrices/vectors in the list must be the same size!", call. = FALSE)
   }
   all_numeric <- all(sapply(x, function(a) is.numeric(a)))
-  if(!all_numeric) {
-    stop("All elements of the list must be numeric!")
+  if (!all_numeric) {
+    stop("All elements of the list must be numeric!", call. = FALSE)
   }
   element_num_of_dim <- length(element_dim)
   x <- unlist(x)
@@ -237,25 +244,27 @@ write_stan_json <- function(data, file) {
   if (!requireNamespace("jsonlite", quietly = TRUE)) {
     stop("Please install the 'jsonlite' package.", call. = FALSE)
   }
-  # check filename is valid(vector of characters) and of nonzero length
   if (!is.character(file) || !nzchar(file)) {
-    stop("The supplied filename is invalid!")
+    stop("The supplied filename is invalid!", call. = FALSE)
   }
+
   for (var_name in names(data)) {
     var <- data[[var_name]]
-    if(!(is.numeric(var) || is.factor(var) || is.logical(var) || is.data.frame(var)  || is.list(var))) {
-      stop(paste("Variable ", var_name, " is of invalid type."))
+    if (!(is.numeric(var) || is.factor(var) || is.logical(var) ||
+          is.data.frame(var) || is.list(var))) {
+      stop("Variable '", var_name, "' is of invalid type.", call. = FALSE)
     }
-    # convert TRUE/FALSE to 1/0
-    if(is.logical(var)) {
-      mode(var) <- "integer"
-    } else if(is.data.frame(var)) {
+
+    if (is.logical(var)) {
+      mode(var) <- "integer" # convert TRUE/FALSE to 1/0
+    } else if (is.data.frame(var)) {
       var <- data.matrix(var)
-    }else if(is.list(var)) {
+    } else if (is.list(var)) {
       var <- list_to_array(var)
     }
     data[[var_name]] <- var
   }
+
   # call to write JSON with
   # unboxing variables (N = 10 is stored as N : 10, not N: [10])
   # handling factors as integers
@@ -273,29 +282,18 @@ write_stan_json <- function(data, file) {
 
 #' Cleanup build files of a Stan model
 #'
-#' deletes the model_name.o, model_name.hpp and the executable.
+#' Deletes `model_name.o`, `model_name.hpp` and the executable.
 #'
-#' @param model_path (string) The absolute path to the model
-#' @param remove_main (logical) Set TRUE to also remove the cmdstan main.o
+#' @param model_path (string) The absolute path to the model.
+#' @param remove_main (logical) Set `TRUE` to also remove the CmdStan `main.o`.
 #' @noRd
-build_cleanup <- function(model_path,
-                          remove_main = FALSE) {
-  model_hpp_file <- paste(model_path, ".hpp", sep = "")
-  model_o_file <- paste(model_path, ".o", sep = "")
-  if(file.exists(model_hpp_file)) {
-    file.remove(model_hpp_file)
-  }
-  if(file.exists(model_o_file)) {
-    file.remove(model_o_file)
-  }
-  if(file.exists(model_path)) {
-    file.remove(model_path)
-  }
-  if(remove_main) {
-    main_o_file <- file.path(cmdstan_path(), "src", "cmdstan", "main.o")
-    if(file.exists(main_o_file)) {
-      file.remove(main_o_file)
-    }
+build_cleanup <- function(model_path, remove_main = FALSE) {
+  files_to_remove <- c(
+    paste0(model_path, c("", ".exe", ".o", ".hpp")),
+    if (remove_main) file.path(cmdstan_path(), "src", "cmdstan", "main.o")
+  )
+  for (file in files_to_remove) if (file.exists(file)) {
+    file.remove(file)
   }
 }
 
@@ -304,7 +302,8 @@ set_make_local <- function(threads = FALSE,
                            opencl_platform_id = 0,
                            opencl_device_id = 0,
                            compiler_flags = NULL) {
-  cmdstanr_generated_flags_comment <- "# cmdstanr generated make/local flags (add user flags above this line)"
+  cmdstanr_generated_flags_comment <-
+    "# cmdstanr generated make/local flags (add user flags above this line)"
   make_local_path <- file.path(cmdstan_path(), "make", "local")
   user_flags <- c()
   old_make_local_cmdstanr <- c()
@@ -343,7 +342,7 @@ set_make_local <- function(threads = FALSE,
     writeLines(make_local_content, make_local_path)
     return(TRUE)
   }
-  return(FALSE)
+  FALSE
 }
 
 
